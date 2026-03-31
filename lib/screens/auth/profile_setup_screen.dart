@@ -1,85 +1,95 @@
 import 'package:flutter/material.dart';
-import '../../design/app_spacing.dart';
-import '../../design/app_typography.dart';
-import '../../widgets/fyt_text_field.dart';
-import '../../widgets/fyt_button.dart';
-import '../../routing/app_router.dart';
 
 class ProfileSetupScreen extends StatelessWidget {
   const ProfileSetupScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final styleOptions = ['Minimal', 'Classic', 'Bold'];
-    String? selectedStyle;
-    String? climateRegion;
-
-    // For brevity, using StatelessWidget; in real code use Stateful or state mgmt.
-
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F1EA),
       appBar: AppBar(title: const Text('Profile Setup')),
       body: SafeArea(
         child: Padding(
-          padding: AppSpacing.screenPadding,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Tell FYT about you',
-                    style: AppTypography.heading(context)),
-                const SizedBox(height: AppSpacing.xl),
-                const FytTextField(label: 'Name'),
-                const SizedBox(height: AppSpacing.lg),
-                Text('Style preference',
-                    style: AppTypography.label(context)),
-                const SizedBox(height: AppSpacing.sm),
-                Wrap(
-                  spacing: AppSpacing.sm,
-                  children: styleOptions
-                      .map(
-                        (s) => ChoiceChip(
-                          label: Text(s),
-                          selected: selectedStyle == s,
-                          onSelected: (_) {},
-                        ),
-                      )
-                      .toList(),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+          child: Column(
+            children: [
+              const Text(
+                'Tell FYT about you',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF333333),
                 ),
-                const SizedBox(height: AppSpacing.lg),
-                Text('Climate region',
-                    style: AppTypography.label(context)),
-                const SizedBox(height: AppSpacing.sm),
-                DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(),
-                  value: climateRegion,
-                  items: const [
-                    DropdownMenuItem(
-                        value: 'Temperate',
-                        child: Text('Temperate')),
-                    DropdownMenuItem(
-                        value: 'Tropical',
-                        child: Text('Tropical')),
-                    DropdownMenuItem(
-                        value: 'Dry',
-                        child: Text('Dry')),
-                    DropdownMenuItem(
-                        value: 'Cold',
-                        child: Text('Cold')),
-                  ],
-                  onChanged: (_) {},
-                ),
-                const Spacer(),
-                FytButton(
-                  label: 'Continue',
-                  onPressed: () =>
-                      Navigator.pushReplacementNamed(
-                    context,
-                    AppRoutes.home,
+              ),
+              const SizedBox(height: 32),
+              TextField(
+                decoration: InputDecoration(
+                  hintText: 'Your name',
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    borderSide: const BorderSide(color: Color(0xFFE2DED5)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    borderSide: const BorderSide(color: Color(0xFFE2DED5)),
                   ),
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Style preference',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF333333),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                children: const ['Minimal', 'Classic', 'Bold']
+                    .map((style) => ChoiceChip(
+                          label: Text(style),
+                          selected: style == 'Minimal',
+                          selectedColor: Color(0xFFD8D4F2),
+                        ))
+                    .toList(),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Climate region',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF333333),
+                ),
+              ),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(18)),
+                    borderSide: const BorderSide(color: Color(0xFFE2DED5)),
+                  ),
+                ),
+                items: const ['Temperate', 'Tropical', 'Dry', 'Cold']
+                    .map((region) => DropdownMenuItem(
+                          value: region,
+                          child: Text(region),
+                        ))
+                    .toList(),
+                onChanged: (value) {},
+              ),
+              const Spacer(),
+              ElevatedButton(
+                onPressed: () => Navigator.pushReplacementNamed(context, '/home'),
+                child: const Text('Continue'),
+              ),
+            ],
           ),
         ),
       ),

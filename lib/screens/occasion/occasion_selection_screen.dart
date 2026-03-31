@@ -1,10 +1,10 @@
 // ...existing code...
 import 'package:flutter/material.dart';
-import 'package:my_flutter_app/design/app_spacing.dart';
-import 'package:my_flutter_app/design/app_typography.dart';
-import 'package:my_flutter_app/widgets/fyt_card.dart';
-import 'package:my_flutter_app/design/responsive.dart';
-import 'package:my_flutter_app/routing/app_router.dart';
+import '../../design/app_spacing.dart';
+import '../../design/app_typography.dart';
+import '../../widgets/fyt_card.dart';
+import '../../design/responsive.dart';
+import '../../routing/app_routes.dart';
 
 class OccasionSelectionScreen extends StatelessWidget {
   const OccasionSelectionScreen({super.key});
@@ -35,6 +35,7 @@ class OccasionSelectionScreen extends StatelessWidget {
                       onTap: () => Navigator.pushNamed(
                         context,
                         AppRoutes.moodConfidence,
+                        arguments: o,
                       ),
                       child: Center(
                         child: Text(

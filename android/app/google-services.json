@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "867416826341",
+    "project_id": "fyt-fityou",
+    "storage_bucket": "fyt-fityou.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:867416826341:android:6bf8af7e2e0e0a8dbc0f0c",
+        "android_client_info": {
+          "package_name": "com.fyt.fityou"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "867416826341-gb116tku21jotgdjenvl4ekvvakaau32.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAsy4kBsOB344PAhxXYotViMgL6fY25MCQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "867416826341-gb116tku21jotgdjenvl4ekvvakaau32.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

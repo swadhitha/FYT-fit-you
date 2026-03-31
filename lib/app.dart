@@ -1,7 +1,7 @@
-// lib/app.dart
 import 'package:flutter/material.dart';
-import 'design/app_theme.dart';
 import 'routing/app_router.dart';
+import 'routing/app_routes.dart';
+import 'design/app_theme.dart';
 
 class FytApp extends StatelessWidget {
   const FytApp({super.key});
@@ -12,7 +12,7 @@ class FytApp extends StatelessWidget {
       title: 'FYT',
       debugShowCheckedModeBanner: false,
       theme: buildFytTheme(),
-      initialRoute: AppRoutes.splash,
+      initialRoute: AppRoutes.login,
       onGenerateRoute: onGenerateRoute,
     );
   }

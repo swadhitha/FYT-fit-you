@@ -1,7 +1,4 @@
-// ...existing code...
 import 'package:flutter/material.dart';
-import 'package:my_flutter_app/design/app_spacing.dart';
-import 'package:my_flutter_app/design/app_typography.dart';
 
 class MoodConfidenceScreen extends StatefulWidget {
   const MoodConfidenceScreen({super.key});
@@ -12,7 +9,7 @@ class MoodConfidenceScreen extends StatefulWidget {
 
 class _MoodConfidenceScreenState extends State<MoodConfidenceScreen> {
   final TextEditingController _controller = TextEditingController();
-  String? _submittedText;
+  bool _submitted = false;
 
   @override
   void dispose() {
@@ -21,55 +18,63 @@ class _MoodConfidenceScreenState extends State<MoodConfidenceScreen> {
   }
 
   void _onSubmit() {
-    setState(() {
-      _submittedText = _controller.text.trim();
-    });
+    setState(() => _submitted = true);
     FocusScope.of(context).unfocus();
+    Future.delayed(const Duration(milliseconds: 800), () {
+      if (mounted) {
+        Navigator.pushNamed(context, '/outfit-recommendation');
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F1EA),
       appBar: AppBar(title: const Text('Tune Your Look')),
       body: SafeArea(
         child: Padding(
-          padding: AppSpacing.screenPadding,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 8),
-              Text(
+              const Text(
                 'Any other specifications?',
-                style: AppTypography.heading(context),
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF333333),
+                ),
               ),
-              const SizedBox(height: AppSpacing.md),
+              const SizedBox(height: 16),
               TextField(
                 controller: _controller,
                 textInputAction: TextInputAction.done,
                 onSubmitted: (_) => _onSubmit(),
                 decoration: InputDecoration(
                   hintText: 'e.g. prefer bright colors, no prints, formal',
-                  border: const OutlineInputBorder(),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    borderSide: const BorderSide(color: Color(0xFFE2DED5)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    borderSide: const BorderSide(color: Color(0xFFE2DED5)),
+                  ),
                 ),
                 minLines: 1,
                 maxLines: 4,
               ),
-              const SizedBox(height: AppSpacing.md),
+              const SizedBox(height: 16),
               Align(
                 alignment: Alignment.centerRight,
                 child: ElevatedButton(
-                  onPressed: _onSubmit,
-                  child: const Text('Submit'),
+                  onPressed: _submitted ? null : _onSubmit,
+                  child: Text(_submitted ? 'Styling you...' : 'Submit'),
                 ),
               ),
-              const SizedBox(height: AppSpacing.lg),
-              if (_submittedText != null && _submittedText!.isNotEmpty)
-                Center(
-                  child: Text(
-                    'Cool, let us style you',
-                    style: AppTypography.heading(context),
-                  ),
-                ),
             ],
           ),
         ),
@@ -77,4 +82,3 @@ class _MoodConfidenceScreenState extends State<MoodConfidenceScreen> {
     );
   }
 }
-// ...existing code...

@@ -1,6 +1,6 @@
-# My Flutter App
+# FYT (Fit-You) Flutter App
 
-This is a Flutter application that serves as a template for building mobile applications. 
+A Flutter mobile application that provides AI-powered fashion styling and wardrobe management.
 
 ## Getting Started
 
@@ -10,17 +10,19 @@ To get started with this project, ensure you have Flutter installed on your mach
 
 - Flutter SDK
 - Dart SDK
-- An IDE (e.g., Android Studio, VS Code)
+- Android Studio or VS Code with Flutter extension
+- Android SDK (API Level 23+)
+- Physical Android device or Android Emulator
 
 ### Installation
 
 1. Clone the repository:
    ```
-   git clone https://github.com/your_username/my_flutter_app.git
+   git clone https://github.com/your_username/FYT-fit-you.git
    ```
 2. Navigate to the project directory:
    ```
-   cd my_flutter_app
+   cd FYT-fit-you
    ```
 3. Install the dependencies:
    ```
@@ -29,25 +31,60 @@ To get started with this project, ensure you have Flutter installed on your mach
 
 ### Running the App
 
-To run the app, use the following command:
+This app targets Android only (minSdk 23). To run on an Android device or emulator:
+
+```bash
+flutter run -d android
 ```
-flutter run
+
+Or to run on a specific device:
+```bash
+flutter devices
+flutter run -d <device_id>
 ```
+
+**Note:** Do not run on Chrome/web as this app is Android-only and may throw Firebase JavaScript errors.
+
+### Firebase Setup
+
+1. Create a Firebase project at https://console.firebase.google.com
+2. Add an Android app to your Firebase project
+3. Download `google-services.json` and place it in `android/app/`
+4. Update `lib/config/api_keys.dart` with your Mistral AI API key
 
 ### Project Structure
 
-- `lib/`: Contains the main application code.
-  - `main.dart`: Entry point of the application.
-  - `app.dart`: Main application widget.
-  - `routes.dart`: Defines navigation routes.
-  - `screens/`: Contains different screen widgets.
-  - `widgets/`: Contains reusable widgets.
-  - `models/`: Contains data models.
-- `test/`: Contains widget tests for the application.
-- `pubspec.yaml`: Project configuration file.
-- `analysis_options.yaml`: Dart analyzer configuration.
-- `.gitignore`: Specifies files to ignore in Git.
-- `README.md`: Project documentation.
+- `lib/`: Contains the main application code
+  - `main.dart`: Entry point with Firebase initialization
+  - `app.dart`: Main application widget
+  - `config/`: Configuration files (API keys)
+  - `design/`: Design system (colors, typography, theme)
+  - `models/`: Data models (User, WardrobeItem, BodyProfile)
+  - `providers/`: State management (Auth, Wardrobe, UserProfile)
+  - `routing/`: Navigation routes and router
+  - `screens/`: UI screens (Auth, Home, Wardrobe, etc.)
+  - `services/`: Business logic (Firebase, Storage, Auth)
+  - `widgets/`: Reusable UI components
+- `android/`: Android-specific configuration
+- `test/`: Contains widget tests
+- `pubspec.yaml`: Project configuration and dependencies
+
+### Features
+
+- **User Authentication**: Firebase Auth with email/password
+- **Body Blueprint**: ML Kit pose detection for measurements
+- **Smart Closet**: Digital wardrobe management
+- **AI Stylist Chat**: Mistral AI for fashion advice
+- **Occasion Mode**: Event-based outfit recommendations
+- **Profile Management**: User preferences and settings
+
+### Error Handling
+
+The app includes comprehensive error handling:
+- Firebase initialization with graceful fallback
+- User-friendly error messages for all Firebase operations
+- Provider-level error state management
+- Proper exception handling in all services
 
 ### Contributing
 

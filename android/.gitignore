@@ -12,3 +12,19 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+
+# Exclude body metric screens and services
+lib/screens/body_blueprint/
+lib/screens/body_scan/
+lib/services/body_analysis_service.dart
+
+# Firebase config (sensitive)
+android/app/google-services.json
+
+# API keys
+lib/config/api_keys.dart
+
+# Flutter/Dart
+.dart_tool/
+build/
+*.g.dart

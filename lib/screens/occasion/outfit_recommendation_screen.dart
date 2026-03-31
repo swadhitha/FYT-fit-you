@@ -1,10 +1,4 @@
-// ...existing code...
 import 'package:flutter/material.dart';
-import '../../widgets/fyt_button.dart';
-import '../../design/app_colors.dart';
-import '../../design/app_spacing.dart';
-import '../../design/app_typography.dart';
-import '../../routing/app_router.dart';
 
 class OutfitRecommendationScreen extends StatelessWidget {
   const OutfitRecommendationScreen({super.key});
@@ -12,68 +6,72 @@ class OutfitRecommendationScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Today’s Look')),
+      backgroundColor: const Color(0xFFF5F1EA),
+      appBar: AppBar(title: const Text('Today\'s Look')),
       body: SafeArea(
         child: Padding(
-          padding: AppSpacing.screenPadding,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
           child: ListView(
             children: [
               Container(
                 height: 260,
                 decoration: BoxDecoration(
-                  color: AppColors.bgSecondary,
-                  borderRadius:
-                      BorderRadius.circular(AppSpacing.cornerRadiusCard),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
                 ),
                 child: const Center(
                   child: Icon(
                     Icons.checkroom_rounded,
                     size: 96,
-                    color: AppColors.textSub,
+                    color: Color(0xFF777777),
                   ),
                 ),
               ),
-              const SizedBox(height: AppSpacing.lg),
-              Text('Why it works', style: AppTypography.subheading(context)),
-              const SizedBox(height: AppSpacing.sm),
-              _bullet(context,
-                  'Balances your shoulder and hip line with a structured top.'),
-              _bullet(context,
-                  'Uses monochrome tones to elongate your frame.'),
-              _bullet(context,
-                  'Keeps comfort high while looking polished.'),
-              const SizedBox(height: AppSpacing.lg),
+              const SizedBox(height: 20),
+              const Text(
+                'Why it works',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF333333),
+                ),
+              ),
+              const SizedBox(height: 12),
+              _bullet('Balances your shoulder and hip line with a structured top.'),
+              _bullet('Uses monochrome tones to elongate your frame.'),
+              _bullet('Keeps comfort high while looking polished.'),
+              const SizedBox(height: 20),
               Row(
                 children: [
-                  const _ScoreBadge(
+                  _ScoreBadge(
                     label: 'Suitability',
                     value: '92%',
-                    color: AppColors.successSoft,
+                    color: const Color(0xFFB9E6C9),
                   ),
-                  const SizedBox(width: AppSpacing.sm),
+                  const SizedBox(width: 12),
                   _ScoreBadge(
                     label: 'Confidence',
                     value: '88%',
-                    color: AppColors.accentLavender.withOpacity(0.3),
+                    color: const Color(0xFFD8D4F2),
                   ),
                 ],
               ),
-              const SizedBox(height: AppSpacing.xl),
-              FytButton(
-                label: 'Ask Stylist',
-                onPressed: () => Navigator.pushNamed(context, AppRoutes.aiChat),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () =>
+                    Navigator.pushNamed(context, '/ai-chat'),
+                child: const Text('Ask Stylist'),
               ),
-              const SizedBox(height: AppSpacing.sm),
-              FytButton(
-                label: 'Try Alternative',
-                primary: false,
+              const SizedBox(height: 12),
+              OutlinedButton(
                 onPressed: () {},
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              FytButton(
-                label: 'Save',
-                primary: false,
-                onPressed: () {},
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 52),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(22),
+                  ),
+                ),
+                child: const Text('Try Alternative'),
               ),
             ],
           ),
@@ -82,14 +80,19 @@ class OutfitRecommendationScreen extends StatelessWidget {
     );
   }
 
-  Widget _bullet(BuildContext context, String text) {
+  Widget _bullet(String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text('•  '),
-          Expanded(child: Text(text, style: AppTypography.body(context))),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(fontSize: 14, color: Color(0xFF777777)),
+            ),
+          ),
         ],
       ),
     );
@@ -111,23 +114,32 @@ class _ScoreBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: color,
           borderRadius: BorderRadius.circular(18),
         ),
         child: Column(
           children: [
-            Text(label, style: AppTypography.label(context)),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 13,
+                color: Color(0xFF777777),
+              ),
+            ),
             const SizedBox(height: 4),
-            Text(value, style: AppTypography.subheading(context)),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF333333),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 }
-// ...existing code...
