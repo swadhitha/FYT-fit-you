@@ -1,14 +1,48 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/api_models.dart';
 
 /// Centralized API service for all backend communication.
 class ApiService {
+  static const String _prefCustomBaseUrl = 'api_custom_base_url';
+  static String? _runtimeBaseUrl;
+
+  static Future<void> initialize() async {
+    final prefs = await SharedPreferences.getInstance();
+    _runtimeBaseUrl = prefs.getString(_prefCustomBaseUrl);
+  }
+
+  static Future<void> setCustomBaseUrl(String? value) async {
+    final prefs = await SharedPreferences.getInstance();
+    final normalized = _normalizeUrl(value);
+    _runtimeBaseUrl = normalized;
+    if (normalized == null) {
+      await prefs.remove(_prefCustomBaseUrl);
+    } else {
+      await prefs.setString(_prefCustomBaseUrl, normalized);
+    }
+  }
+
+  static String? get customBaseUrl => _runtimeBaseUrl;
+
+  static String? _normalizeUrl(String? value) {
+    if (value == null) return null;
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return null;
+    return trimmed.endsWith('/')
+        ? trimmed.substring(0, trimmed.length - 1)
+        : trimmed;
+  }
+
   static String get baseUrl {
     const envUrl = String.fromEnvironment('API_BASE_URL', defaultValue: '');
     if (envUrl.isNotEmpty) {
       return envUrl;
+    }
+    if (_runtimeBaseUrl != null && _runtimeBaseUrl!.isNotEmpty) {
+      return _runtimeBaseUrl!;
     }
     if (Platform.isAndroid) {
       // Android emulator host loopback to local machine.
@@ -41,16 +75,16 @@ class ApiService {
   }) async {
     final response = await http
         .post(
-      Uri.parse('$baseUrl/api/users/register'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'name': name,
-        'email': email,
-        'password': password,
-        'style_preference': stylePreference,
-        'climate_region': climateRegion,
-      }),
-    )
+          Uri.parse('$baseUrl/api/users/register'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'name': name,
+            'email': email,
+            'password': password,
+            'style_preference': stylePreference,
+            'climate_region': climateRegion,
+          }),
+        )
         .timeout(const Duration(seconds: 20));
     if (response.statusCode != 200) {
       throw Exception(_extractError(response, 'Registration failed'));
@@ -64,10 +98,10 @@ class ApiService {
   }) async {
     final response = await http
         .post(
-      Uri.parse('$baseUrl/api/users/login'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'password': password}),
-    )
+          Uri.parse('$baseUrl/api/users/login'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'email': email, 'password': password}),
+        )
         .timeout(const Duration(seconds: 20));
     if (response.statusCode != 200) {
       throw Exception(_extractError(response, 'Login failed'));
@@ -97,18 +131,18 @@ class ApiService {
   }) async {
     final response = await http
         .post(
-      Uri.parse('$baseUrl/api/body-profile/$userId'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'height_cm': heightCm,
-        'weight_kg': weightKg,
-        'shoulder_cm': shoulderCm,
-        'chest_cm': chestCm,
-        'waist_cm': waistCm,
-        'hip_cm': hipCm,
-        'inseam_cm': inseamCm,
-      }),
-    )
+          Uri.parse('$baseUrl/api/body-profile/$userId'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'height_cm': heightCm,
+            'weight_kg': weightKg,
+            'shoulder_cm': shoulderCm,
+            'chest_cm': chestCm,
+            'waist_cm': waistCm,
+            'hip_cm': hipCm,
+            'inseam_cm': inseamCm,
+          }),
+        )
         .timeout(const Duration(seconds: 20));
     if (response.statusCode != 200) {
       throw Exception(_extractError(response, 'Analysis failed'));
@@ -131,7 +165,8 @@ class ApiService {
   }) async {
     final uri = Uri.parse('$baseUrl/api/body-profile/$userId/scan');
     final request = http.MultipartRequest('POST', uri);
-    request.files.add(await http.MultipartFile.fromPath('file', imageFile.path));
+    request.files
+        .add(await http.MultipartFile.fromPath('file', imageFile.path));
 
     final streamedResponse = await request.send();
     final response = await http.Response.fromStream(streamedResponse);
@@ -204,15 +239,15 @@ class ApiService {
   }) async {
     final response = await http
         .post(
-      Uri.parse('$baseUrl/api/recommendations/$userId'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'occasion': occasion,
-        'mood': mood,
-        'climate': climate,
-        'additional_notes': additionalNotes,
-      }),
-    )
+          Uri.parse('$baseUrl/api/recommendations/$userId'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'occasion': occasion,
+            'mood': mood,
+            'climate': climate,
+            'additional_notes': additionalNotes,
+          }),
+        )
         .timeout(const Duration(seconds: 30));
     if (response.statusCode != 200) {
       throw Exception(_extractError(response, 'Recommendation failed'));
@@ -229,13 +264,13 @@ class ApiService {
   }) async {
     final response = await http
         .post(
-      Uri.parse('$baseUrl/api/chat/$userId'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'message': message,
-        'context': context,
-      }),
-    )
+          Uri.parse('$baseUrl/api/chat/$userId'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'message': message,
+            'context': context,
+          }),
+        )
         .timeout(const Duration(seconds: 30));
     if (response.statusCode != 200) {
       throw Exception(_extractError(response, 'Chat failed'));

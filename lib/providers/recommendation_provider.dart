@@ -50,7 +50,11 @@ class RecommendationProvider extends ChangeNotifier {
         additionalNotes: _additionalNotes,
       );
     } catch (e) {
-      _error = e.toString().replaceAll('Exception: ', '');
+      final raw = e.toString().replaceAll('Exception: ', '');
+      _error = raw.contains('SocketException') ||
+              raw.contains('SocketConnection')
+          ? 'Cannot reach backend server. Open Settings and set a reachable Backend URL.'
+          : raw;
     }
 
     _loading = false;

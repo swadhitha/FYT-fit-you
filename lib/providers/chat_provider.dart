@@ -5,7 +5,11 @@ import '../services/api_service.dart';
 class ChatProvider extends ChangeNotifier {
   final List<ChatMsg> _messages = [];
   bool _loading = false;
-  List<String> _suggestions = ['Why this outfit?', 'Make it casual', 'Style tips'];
+  List<String> _suggestions = [
+    'Why this outfit?',
+    'Make it casual',
+    'Style tips'
+  ];
 
   List<ChatMsg> get messages => _messages;
   bool get loading => _loading;
@@ -49,9 +53,14 @@ class ChatProvider extends ChangeNotifier {
       ));
       _suggestions = response.suggestions;
     } catch (e) {
+      final raw = e.toString().replaceAll('Exception: ', '');
+      final message = raw.contains('SocketException') ||
+              raw.contains('SocketConnection')
+          ? 'Cannot reach backend server. Open Settings and set a reachable Backend URL.'
+          : 'Sorry, I couldn\'t process that. $raw';
       _messages.add(ChatMsg(
         role: 'assistant',
-        message: 'Sorry, I couldn\'t process that. Please try again.',
+        message: message,
       ));
     }
 

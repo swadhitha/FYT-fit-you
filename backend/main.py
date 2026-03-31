@@ -22,7 +22,7 @@ try:
 except ImportError:
     cv2 = None  # type: ignore
 
-from database import init_database, insert_sample_data
+from database import init_database, insert_sample_data, get_connection
 from body_metric_module import analyse_image, BodyMetricResult
 
 # Import routers
@@ -99,6 +99,57 @@ async def body_metrics(file: UploadFile = File(...)) -> dict:
 async def health() -> dict:
     """Health check endpoint."""
     return {"status": "ok", "service": "FYT API", "version": "1.0.0"}
+
+
+@app.get("/diagnostics")
+async def diagnostics() -> dict:
+    """Runtime diagnostics for DB, modules, and dataset availability."""
+    table_counts: dict[str, int] = {}
+    db_ok = True
+    db_error = None
+
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        for table in [
+            "users",
+            "body_profile",
+            "wardrobe_items",
+            "user_preferences",
+            "recommendations",
+            "chat_logs",
+        ]:
+            table_counts[table] = cursor.execute(
+                f"SELECT COUNT(*) FROM {table}"
+            ).fetchone()[0]
+        conn.close()
+    except Exception as e:
+        db_ok = False
+        db_error = str(e)
+
+    try:
+        import mediapipe  # type: ignore
+        mediapipe_available = True
+    except ImportError:
+        mediapipe_available = False
+
+    return {
+        "service": "FYT API",
+        "db": {"ok": db_ok, "error": db_error, "table_counts": table_counts},
+        "modules": {
+            "opencv_available": cv2 is not None,
+            "mediapipe_available": mediapipe_available,
+        },
+        "datasets": {
+            "external_pretrained": ["MediaPipe Pose landmarks"],
+            "application_data_sources": [
+                "user profile data",
+                "user wardrobe metadata",
+                "chat feedback and preference signals",
+                "recommendation history logs",
+            ],
+        },
+    }
 
 
 @app.get("/")
