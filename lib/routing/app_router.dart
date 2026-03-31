@@ -8,6 +8,10 @@ import '../screens/auth/profile_setup_screen.dart';
 import '../screens/home/home_dashboard_screen.dart';
 import '../screens/body_blueprint/body_blueprint_intro_screen.dart';
 import '../screens/body_blueprint/body_scan_screen.dart';
+<<<<<<< HEAD
+=======
+import '../screens/body_blueprint/body_measurement_screen.dart';
+>>>>>>> feature/body-metric-module-clean
 import '../screens/body_blueprint/body_analysis_screen.dart';
 import '../screens/body_blueprint/body_profile_result_screen.dart';
 import '../screens/occasion/occasion_selection_screen.dart';
@@ -29,6 +33,10 @@ class AppRoutes {
 
   static const bodyIntro = '/body-intro';
   static const bodyScan = '/body-scan';
+<<<<<<< HEAD
+=======
+  static const bodyMeasurement = '/body-measurement';
+>>>>>>> feature/body-metric-module-clean
   static const bodyAnalysis = '/body-analysis';
   static const bodyResult = '/body-result';
 
@@ -65,6 +73,11 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
       return _slide(const BodyBlueprintIntroScreen());
     case AppRoutes.bodyScan:
       return _slide(const BodyScanScreen());
+<<<<<<< HEAD
+=======
+    case AppRoutes.bodyMeasurement:
+      return _slide(const BodyMeasurementScreen());
+>>>>>>> feature/body-metric-module-clean
     case AppRoutes.bodyAnalysis:
       return _fade(const BodyAnalysisScreen());
     case AppRoutes.bodyResult:
@@ -115,4 +128,8 @@ PageRoute _slide(Widget child) {
       );
     },
   );
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> feature/body-metric-module-clean

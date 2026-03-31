@@ -19,7 +19,11 @@ class SplashScreen extends StatelessWidget {
       body: SafeArea(
         child: Center(
           child: Text(
+<<<<<<< HEAD
             'FYT',
+=======
+            'FYT (fit+you)',
+>>>>>>> feature/body-metric-module-clean
             style: Theme.of(context).textTheme.headlineMedium,
           ),
         ),

@@ -16,7 +16,11 @@ class HomeDashboardScreen extends StatefulWidget {
 
 class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
   FytTab _tab = FytTab.home;
+<<<<<<< HEAD
   final String userName = 'Niru';
+=======
+  final String userName = 'Ramesh Sir';
+>>>>>>> feature/body-metric-module-clean
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +37,11 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+<<<<<<< HEAD
                   Text('Good Morning, $userName ☀️',
+=======
+                  Text('Good Afternoon, $userName ☀️',
+>>>>>>> feature/body-metric-module-clean
                       style: AppTypography.heading(context)),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
