@@ -63,7 +63,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, Tuple, Optional
+from typing import Dict, Tuple, Optional, List
 
 import numpy as np
 
@@ -122,15 +122,94 @@ class BodyMetricResult:
         """Return a serialisable dictionary representation of the result."""
         return {
             "body_type": self.body_type.value,
-            "metrics": self.metrics,
-            "symmetry": self.symmetry,
-            "posture_angle": self.posture_angle,
+            "metrics": {k: float(v) for k, v in self.metrics.items()},
+            "symmetry": float(self.symmetry),
+            "posture_angle": float(self.posture_angle),
         }
 
 
 def _euclidean_distance(p1: Tuple[float, float], p2: Tuple[float, float]) -> float:
     """Return the Euclidean distance between two 2D points."""
     return float(np.linalg.norm(np.array(p1) - np.array(p2)))
+
+
+def _prepare_variants(image: np.ndarray) -> List[np.ndarray]:
+    """Create a few robust image variants to improve pose detection success."""
+    variants = [image]
+    if cv2 is None:
+        return variants
+
+    # Contrast enhanced variant (helps low-light photos).
+    lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
+    l, a, b = cv2.split(lab)
+    clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
+    l2 = clahe.apply(l)
+    enhanced = cv2.cvtColor(cv2.merge((l2, a, b)), cv2.COLOR_LAB2BGR)
+    variants.append(enhanced)
+
+    # Slightly upscaled variant (helps when subject occupies fewer pixels).
+    h, w = image.shape[:2]
+    if max(h, w) < 1080:
+        scale = min(1.6, 1080.0 / max(h, w))
+        resized = cv2.resize(
+            image, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_CUBIC
+        )
+        variants.append(resized)
+
+    return variants
+
+
+def _extract_landmarks_fallback(image: np.ndarray) -> Optional[Dict[str, Tuple[float, float]]]:
+    """Fallback body landmark estimation using OpenCV person detector.
+
+    This is a coarse fallback when MediaPipe Pose landmarks are unavailable.
+    """
+    if cv2 is None:
+        return None
+
+    hog = cv2.HOGDescriptor()
+    hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
+    rects, _ = hog.detectMultiScale(
+        image,
+        winStride=(8, 8),
+        padding=(8, 8),
+        scale=1.05,
+    )
+    if len(rects) == 0:
+        # Last-resort fallback: assume centered full-body framing.
+        h_img, w_img = image.shape[:2]
+        w = 0.58 * w_img
+        h = 0.86 * h_img
+        x = (w_img - w) / 2.0
+        y = (h_img - h) / 2.0
+    else:
+        x, y, w, h = max(rects, key=lambda r: r[2] * r[3])
+    x = float(x)
+    y = float(y)
+    w = float(w)
+    h = float(h)
+
+    cx = x + w / 2.0
+    shoulder_y = y + 0.22 * h
+    hip_y = y + 0.56 * h
+    knee_y = y + 0.77 * h
+    ankle_y = y + 0.95 * h
+
+    shoulder_half = 0.24 * w
+    hip_half = 0.21 * w
+    knee_half = 0.14 * w
+    ankle_half = 0.08 * w
+
+    return {
+        "left_shoulder": (cx - shoulder_half, shoulder_y),
+        "right_shoulder": (cx + shoulder_half, shoulder_y),
+        "left_hip": (cx - hip_half, hip_y),
+        "right_hip": (cx + hip_half, hip_y),
+        "left_knee": (cx - knee_half, knee_y),
+        "right_knee": (cx + knee_half, knee_y),
+        "left_ankle": (cx - ankle_half, ankle_y),
+        "right_ankle": (cx + ankle_half, ankle_y),
+    }
 
 
 def _extract_landmarks(image: np.ndarray) -> Optional[Dict[str, Tuple[float, float]]]:
@@ -141,36 +220,47 @@ def _extract_landmarks(image: np.ndarray) -> Optional[Dict[str, Tuple[float, flo
     ankles.  If pose estimation fails or MediaPipe is unavailable this
     function returns ``None``.
     """
-    if mp is None or cv2 is None:
+    if cv2 is None:
         raise ImportError(
-            "MediaPipe and OpenCV are required for landmark extraction. "
-            "Please install them with `pip install mediapipe opencv-python`."
+            "OpenCV is required for body landmark extraction. "
+            "Please install it with `pip install opencv-python`."
         )
-    # Convert to RGB because MediaPipe expects RGB images
-    rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    pose = mp.solutions.pose.Pose(static_image_mode=True, model_complexity=1)
-    results = pose.process(rgb_image)
-    pose.close()
-    if not results.pose_landmarks:
-        return None
-    landmark_dict: Dict[str, Tuple[float, float]] = {}
-    # Mediapipe returns normalised coordinates (x,y) in [0,1] relative to image
-    # width/height.  Multiply by actual width/height to get pixel coordinates.
-    height, width = image.shape[:2]
-    landmark_map = {
-        "left_shoulder": mp.solutions.pose.PoseLandmark.LEFT_SHOULDER,
-        "right_shoulder": mp.solutions.pose.PoseLandmark.RIGHT_SHOULDER,
-        "left_hip": mp.solutions.pose.PoseLandmark.LEFT_HIP,
-        "right_hip": mp.solutions.pose.PoseLandmark.RIGHT_HIP,
-        "left_knee": mp.solutions.pose.PoseLandmark.LEFT_KNEE,
-        "right_knee": mp.solutions.pose.PoseLandmark.RIGHT_KNEE,
-        "left_ankle": mp.solutions.pose.PoseLandmark.LEFT_ANKLE,
-        "right_ankle": mp.solutions.pose.PoseLandmark.RIGHT_ANKLE,
-    }
-    for name, idx in landmark_map.items():
-        landmark = results.pose_landmarks.landmark[idx]
-        landmark_dict[name] = (landmark.x * width, landmark.y * height)
-    return landmark_dict
+
+    if mp is None or not hasattr(mp, "solutions"):
+        return _extract_landmarks_fallback(image)
+
+    pose = mp.solutions.pose.Pose(
+        static_image_mode=True,
+        model_complexity=2,
+        min_detection_confidence=0.35,
+    )
+    try:
+        for variant in _prepare_variants(image):
+            rgb_image = cv2.cvtColor(variant, cv2.COLOR_BGR2RGB)
+            results = pose.process(rgb_image)
+            if not results.pose_landmarks:
+                continue
+
+            landmark_dict: Dict[str, Tuple[float, float]] = {}
+            height, width = variant.shape[:2]
+            landmark_map = {
+                "left_shoulder": mp.solutions.pose.PoseLandmark.LEFT_SHOULDER,
+                "right_shoulder": mp.solutions.pose.PoseLandmark.RIGHT_SHOULDER,
+                "left_hip": mp.solutions.pose.PoseLandmark.LEFT_HIP,
+                "right_hip": mp.solutions.pose.PoseLandmark.RIGHT_HIP,
+                "left_knee": mp.solutions.pose.PoseLandmark.LEFT_KNEE,
+                "right_knee": mp.solutions.pose.PoseLandmark.RIGHT_KNEE,
+                "left_ankle": mp.solutions.pose.PoseLandmark.LEFT_ANKLE,
+                "right_ankle": mp.solutions.pose.PoseLandmark.RIGHT_ANKLE,
+            }
+            for name, idx in landmark_map.items():
+                landmark = results.pose_landmarks.landmark[idx]
+                landmark_dict[name] = (landmark.x * width, landmark.y * height)
+            return landmark_dict
+    finally:
+        pose.close()
+
+    return _extract_landmarks_fallback(image)
 
 
 def _calculate_metrics(landmarks: Dict[str, Tuple[float, float]]) -> Dict[str, float]:
@@ -201,6 +291,18 @@ def _calculate_metrics(landmarks: Dict[str, Tuple[float, float]]) -> Dict[str, f
     shoulder_width = _euclidean_distance(left_shoulder, right_shoulder)
     # Hip width
     hip_width = _euclidean_distance(left_hip, right_hip)
+    # Approximate waist points by interpolating 35% from hip to shoulder.
+    t = 0.35
+    left_waist = (
+        left_hip[0] + t * (left_shoulder[0] - left_hip[0]),
+        left_hip[1] + t * (left_shoulder[1] - left_hip[1]),
+    )
+    right_waist = (
+        right_hip[0] + t * (right_shoulder[0] - right_hip[0]),
+        right_hip[1] + t * (right_shoulder[1] - right_hip[1]),
+    )
+    waist_width = _euclidean_distance(left_waist, right_waist)
+
     # Midpoints for torso and leg vertical distances
     shoulders_mid = (
         (left_shoulder[0] + right_shoulder[0]) / 2.0,
@@ -219,10 +321,14 @@ def _calculate_metrics(landmarks: Dict[str, Tuple[float, float]]) -> Dict[str, f
     # Normalise by shoulder width
     if shoulder_width == 0:
         shoulder_width = 1.0  # Avoid division by zero; unlikely in practice
+    if hip_width == 0:
+        hip_width = shoulder_width
     metrics: Dict[str, float] = {
         "shoulder_width": 1.0,
         "hip_width": hip_width / shoulder_width,
-        "waist_ratio": hip_width / shoulder_width,
+        # waist_ratio now means waist:hip ratio (not hip:shoulder).
+        "waist_ratio": waist_width / hip_width,
+        "shoulder_to_hip_ratio": shoulder_width / hip_width,
         "torso_length": torso_length / shoulder_width,
         "leg_length": leg_length / shoulder_width,
         "torso_to_leg_ratio": (torso_length / shoulder_width)
@@ -297,23 +403,21 @@ def _classify_body_type(metrics: Dict[str, float]) -> BodyType:
     sophisticated models (e.g. decision trees or neural networks) can
     replace this if you collect labelled data.
     """
-    hip_ratio = metrics["hip_width"]
-    waist_ratio = metrics["waist_ratio"]
-    torso_leg_ratio = metrics["torso_to_leg_ratio"]
-    # Example heuristic thresholds; these may need tuning with real data.
-    # Inverted triangle: shoulders significantly wider than hips (>15%)
-    if hip_ratio < 0.85:
-        return BodyType.INVERTED_TRIANGLE
-    # Triangle (pear): hips significantly wider than shoulders (>15%)
-    if hip_ratio > 1.15:
-        return BodyType.TRIANGLE
-    # Hourglass: hips and shoulders similar, waist smaller
-    if 0.85 <= hip_ratio <= 1.15 and waist_ratio < 0.95:
-        return BodyType.HOURGLASS
-    # Oval: waist wider than shoulders and hips
-    if waist_ratio > 1.05:
+    hip_ratio = metrics["hip_width"]  # hip:shoulder
+    waist_hip = metrics["waist_ratio"]  # waist:hip
+    shoulder_hip = metrics.get("shoulder_to_hip_ratio", 1.0)  # shoulder:hip
+
+    if waist_hip > 0.96:
         return BodyType.OVAL
-    # Rectangle: otherwise
+    # Inverted triangle: shoulders wider than hips
+    if shoulder_hip >= 1.1 and waist_hip < 0.92:
+        return BodyType.INVERTED_TRIANGLE
+    # Triangle: hips wider than shoulders
+    if hip_ratio >= 1.1 and waist_hip < 0.95:
+        return BodyType.TRIANGLE
+    # Hourglass: shoulders and hips balanced with clear waist definition
+    if 0.9 <= shoulder_hip <= 1.1 and waist_hip <= 0.78:
+        return BodyType.HOURGLASS
     return BodyType.RECTANGLE
 
 
