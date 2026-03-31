@@ -1,31 +1,18 @@
-<<<<<<< HEAD
-// ...existing code...
-import 'package:flutter/material.dart';
-import 'package:my_flutter_app/design/app_spacing.dart';
-import 'package:my_flutter_app/design/app_typography.dart';
-import 'package:my_flutter_app/widgets/fyt_button.dart';
-import 'package:my_flutter_app/routing/app_router.dart';
-=======
 import 'package:flutter/material.dart';
 import 'package:my_flutter_app/design/app_spacing.dart';
 import 'package:my_flutter_app/design/app_typography.dart';
 import 'package:my_flutter_app/features/body_metrics/models/body_metric_result.dart';
 import 'package:my_flutter_app/routing/app_router.dart';
 import 'package:my_flutter_app/widgets/fyt_button.dart';
->>>>>>> feature/body-metric-module-clean
 
 class BodyProfileResultScreen extends StatelessWidget {
   const BodyProfileResultScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-<<<<<<< HEAD
-    // Example static data.
-=======
     final args = ModalRoute.of(context)?.settings.arguments;
     final result = args is BodyMetricResult ? args : _fallbackResult();
 
->>>>>>> feature/body-metric-module-clean
     return Scaffold(
       appBar: AppBar(title: const Text('Your Body Blueprint')),
       body: SafeArea(
@@ -33,29 +20,6 @@ class BodyProfileResultScreen extends StatelessWidget {
           padding: AppSpacing.screenPadding,
           child: ListView(
             children: [
-<<<<<<< HEAD
-              Text('Body Type: Soft Rectangle',
-                  style: AppTypography.subheading(context)),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                'Proportion summary',
-                style: AppTypography.label(context),
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                'Balanced shoulders and hips with a gentle waistline. Legs slightly longer than torso.',
-                style: AppTypography.body(context),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              Text(
-                'Styling suggestions',
-                style: AppTypography.label(context),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              _bullet(context, 'Softly structured jackets that define the waist.'),
-              _bullet(context, 'Mid-rise bottoms that keep balance between torso and legs.'),
-              _bullet(context, 'Monochrome outfits to elongate your frame.'),
-=======
               Text('Body Type: ${result.bodyType}',
                   style: AppTypography.subheading(context)),
               const SizedBox(height: AppSpacing.sm),
@@ -86,7 +50,6 @@ class BodyProfileResultScreen extends StatelessWidget {
               Text('Styling suggestions', style: AppTypography.label(context)),
               const SizedBox(height: AppSpacing.sm),
               for (final item in result.stylingSuggestions) _bullet(context, item),
->>>>>>> feature/body-metric-module-clean
               const SizedBox(height: AppSpacing.xl),
               Row(
                 children: [
@@ -102,11 +65,6 @@ class BodyProfileResultScreen extends StatelessWidget {
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: FytButton(
-<<<<<<< HEAD
-                      label: 'Save',
-                      primary: false,
-                      onPressed: () {},
-=======
                       label: 'Retake',
                       primary: false,
                       onPressed: () => Navigator.pushNamedAndRemoveUntil(
@@ -114,7 +72,6 @@ class BodyProfileResultScreen extends StatelessWidget {
                         AppRoutes.bodyScan,
                         ModalRoute.withName(AppRoutes.home),
                       ),
->>>>>>> feature/body-metric-module-clean
                     ),
                   ),
                 ],
@@ -126,15 +83,6 @@ class BodyProfileResultScreen extends StatelessWidget {
     );
   }
 
-<<<<<<< HEAD
-  Widget _bullet(BuildContext context, String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('•  '),
-=======
   BodyMetricResult _fallbackResult() {
     return const BodyMetricResult(
       bodyType: 'Rectangle',
@@ -159,15 +107,10 @@ class BodyProfileResultScreen extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('- '),
->>>>>>> feature/body-metric-module-clean
+          const Text('•  '),
           Expanded(child: Text(text, style: AppTypography.body(context))),
         ],
       ),
     );
   }
 }
-<<<<<<< HEAD
-// ...existing code...
-=======
->>>>>>> feature/body-metric-module-clean

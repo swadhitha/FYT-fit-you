@@ -1,83 +1,208 @@
-// ...existing code...
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../widgets/fyt_button.dart';
 import '../../design/app_colors.dart';
 import '../../design/app_spacing.dart';
 import '../../design/app_typography.dart';
 import '../../routing/app_router.dart';
+import '../../providers/recommendation_provider.dart';
+import '../../models/api_models.dart';
 
-class OutfitRecommendationScreen extends StatelessWidget {
+class OutfitRecommendationScreen extends StatefulWidget {
   const OutfitRecommendationScreen({super.key});
 
   @override
+  State<OutfitRecommendationScreen> createState() =>
+      _OutfitRecommendationScreenState();
+}
+
+class _OutfitRecommendationScreenState
+    extends State<OutfitRecommendationScreen> {
+  int _currentOutfitIndex = 0;
+
+  @override
   Widget build(BuildContext context) {
+    final recProvider = context.watch<RecommendationProvider>();
+    final rec = recProvider.recommendation;
+
+    if (rec == null || rec.outfits.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Outfit')),
+        body: Center(
+          child: Padding(
+            padding: AppSpacing.screenPadding,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.warning_amber_rounded,
+                    size: 64, color: AppColors.textSub),
+                const SizedBox(height: AppSpacing.md),
+                Text('No outfits could be generated.',
+                    style: AppTypography.subheading(context)),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  'Add more items to your wardrobe for better recommendations.',
+                  style: AppTypography.body(context),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                FytButton(
+                  label: 'Go to Smart Closet',
+                  onPressed: () =>
+                      Navigator.pushNamed(context, AppRoutes.smartCloset),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    final outfit = rec.outfits[_currentOutfitIndex];
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Today’s Look')),
+      appBar: AppBar(
+        title: Text('${rec.occasion} Look'),
+        actions: [
+          if (rec.outfits.length > 1)
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Center(
+                child: Text(
+                  '${_currentOutfitIndex + 1}/${rec.outfits.length}',
+                  style: AppTypography.label(context),
+                ),
+              ),
+            ),
+        ],
+      ),
       body: SafeArea(
         child: Padding(
           padding: AppSpacing.screenPadding,
           child: ListView(
             children: [
+              // Outfit items display
               Container(
-                height: 260,
+                padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
                   color: AppColors.bgSecondary,
                   borderRadius:
                       BorderRadius.circular(AppSpacing.cornerRadiusCard),
                 ),
-                child: const Center(
-                  child: Icon(
-                    Icons.checkroom_rounded,
-                    size: 96,
-                    color: AppColors.textSub,
-                  ),
+                child: Column(
+                  children: [
+                    Text('Outfit #${outfit.rank}',
+                        style: AppTypography.subheading(context)),
+                    const SizedBox(height: AppSpacing.md),
+                    ...outfit.items.map((item) => _outfitItemRow(context, item)),
+                  ],
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
-              Text('Why it works', style: AppTypography.subheading(context)),
-              const SizedBox(height: AppSpacing.sm),
-              _bullet(context,
-                  'Balances your shoulder and hip line with a structured top.'),
-              _bullet(context,
-                  'Uses monochrome tones to elongate your frame.'),
-              _bullet(context,
-                  'Keeps comfort high while looking polished.'),
-              const SizedBox(height: AppSpacing.lg),
+
+              // Scores
               Row(
                 children: [
-                  const _ScoreBadge(
+                  _ScoreBadge(
                     label: 'Suitability',
-                    value: '92%',
+                    value: '${outfit.scores["appropriateness"]?.toStringAsFixed(0) ?? "—"}%',
                     color: AppColors.successSoft,
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   _ScoreBadge(
                     label: 'Confidence',
-                    value: '88%',
+                    value: '${outfit.scores["confidence"]?.toStringAsFixed(0) ?? "—"}%',
                     color: AppColors.accentLavender.withOpacity(0.3),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  _ScoreBadge(
+                    label: 'Comfort',
+                    value: '${outfit.scores["comfort"]?.toStringAsFixed(0) ?? "—"}%',
+                    color: AppColors.warningSoft,
                   ),
                 ],
               ),
+              const SizedBox(height: AppSpacing.lg),
+
+              // Why it works
+              Text('Why it works', style: AppTypography.subheading(context)),
+              const SizedBox(height: AppSpacing.sm),
+              ...outfit.explanation
+                  .map((e) => _bullet(context, e)),
               const SizedBox(height: AppSpacing.xl),
+
+              // Actions
               FytButton(
                 label: 'Ask Stylist',
-                onPressed: () => Navigator.pushNamed(context, AppRoutes.aiChat),
+                onPressed: () =>
+                    Navigator.pushNamed(context, AppRoutes.aiChat),
               ),
               const SizedBox(height: AppSpacing.sm),
-              FytButton(
-                label: 'Try Alternative',
-                primary: false,
-                onPressed: () {},
-              ),
+              if (rec.outfits.length > 1)
+                FytButton(
+                  label: 'Try Alternative',
+                  primary: false,
+                  onPressed: () {
+                    setState(() {
+                      _currentOutfitIndex =
+                          (_currentOutfitIndex + 1) % rec.outfits.length;
+                    });
+                  },
+                ),
               const SizedBox(height: AppSpacing.sm),
               FytButton(
-                label: 'Save',
+                label: 'Back to Home',
                 primary: false,
-                onPressed: () {},
+                onPressed: () => Navigator.popUntil(
+                  context,
+                  ModalRoute.withName(AppRoutes.home),
+                ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _outfitItemRow(BuildContext context, OutfitItem item) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.accentLavender.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              item.category == 'Top'
+                  ? Icons.dry_cleaning_rounded
+                  : item.category == 'Bottom'
+                      ? Icons.straighten_rounded
+                      : item.category == 'Outerwear'
+                          ? Icons.layers_rounded
+                          : Icons.checkroom_rounded,
+              size: 20,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(item.name ?? item.category,
+                    style: AppTypography.body(context)
+                        .copyWith(fontWeight: FontWeight.w500)),
+                Text('${item.color} • ${item.formality}',
+                    style: AppTypography.label(context)),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -112,7 +237,7 @@ class _ScoreBadge extends StatelessWidget {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
+          horizontal: AppSpacing.sm,
           vertical: AppSpacing.sm,
         ),
         decoration: BoxDecoration(
@@ -130,4 +255,3 @@ class _ScoreBadge extends StatelessWidget {
     );
   }
 }
-// ...existing code...
