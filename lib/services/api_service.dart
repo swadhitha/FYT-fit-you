@@ -255,6 +255,33 @@ class ApiService {
     if (response.statusCode != 200) throw Exception('Failed to delete item');
   }
 
+  static Future<WardrobeItem> updateWardrobeItem({
+    required int itemId,
+    String? name,
+    required String category,
+    required String color,
+    String? fabric,
+    required String formality,
+  }) async {
+    final response = await http
+        .put(
+          Uri.parse('$baseUrl/api/wardrobe/item/$itemId'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'name': name,
+            'category': category,
+            'color': color,
+            'fabric': fabric,
+            'formality': formality,
+          }),
+        )
+        .timeout(const Duration(seconds: 20));
+    if (response.statusCode != 200) {
+      throw Exception(_extractError(response, 'Failed to update item'));
+    }
+    return WardrobeItem.fromJson(jsonDecode(response.body));
+  }
+
   // ─── Recommendations ────────────────────────────────────
 
   static Future<RecommendationResponse> getRecommendations({

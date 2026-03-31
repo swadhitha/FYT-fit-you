@@ -9,6 +9,7 @@ import '../../routing/app_router.dart';
 import '../../providers/user_provider.dart';
 import '../../providers/wardrobe_provider.dart';
 import '../../models/api_models.dart';
+import '../../services/api_service.dart';
 
 class SmartClosetDashboardScreen extends StatefulWidget {
   const SmartClosetDashboardScreen({super.key});
@@ -68,8 +69,7 @@ class _SmartClosetDashboardScreenState
                               selected: _filter == f,
                               selectedColor:
                                   AppColors.accentLavender.withOpacity(0.4),
-                              onSelected: (_) =>
-                                  setState(() => _filter = f),
+                              onSelected: (_) => setState(() => _filter = f),
                             ),
                           ))
                       .toList(),
@@ -119,13 +119,12 @@ class _SmartClosetDashboardScreenState
                       final item = filtered[index];
                       return _WardrobeCard(
                         item: item,
+                        onTap: () => _openItemActions(item),
                         onDelete: () async {
-                          final ok = await wardrobeProvider
-                              .deleteItem(item.id);
+                          final ok = await wardrobeProvider.deleteItem(item.id);
                           if (ok && mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content: Text('Item removed')),
+                              const SnackBar(content: Text('Item removed')),
                             );
                           }
                         },
@@ -147,63 +146,273 @@ class _SmartClosetDashboardScreenState
             context.read<WardrobeProvider>().loadWardrobe(userId);
           }
         },
-        child:
-            const Icon(Icons.add_rounded, color: AppColors.textPrimary),
+        child: const Icon(Icons.add_rounded, color: AppColors.textPrimary),
       ),
+    );
+  }
+
+  Future<void> _openItemActions(WardrobeItem item) async {
+    final wardrobe = context.read<WardrobeProvider>();
+    final nameCtrl = TextEditingController(text: item.name ?? '');
+    String category = item.category;
+    String color = item.color;
+    String formality = item.formality;
+    String fabric = item.fabric ?? 'Cotton';
+    const categories = [
+      'Top',
+      'Bottom',
+      'Dress',
+      'Outerwear',
+      'Footwear',
+      'Accessory'
+    ];
+    const colors = [
+      'Black',
+      'White',
+      'Grey',
+      'Navy',
+      'Blue',
+      'Light Blue',
+      'Beige',
+      'Cream',
+      'Khaki',
+      'Maroon',
+      'Brown',
+      'Olive',
+      'Pink',
+      'Red',
+      'Mustard',
+      'Purple',
+    ];
+    const formalities = ['Casual', 'Smart Casual', 'Semi-Formal', 'Formal'];
+    const fabrics = [
+      'Cotton',
+      'Linen',
+      'Polyester',
+      'Denim',
+      'Wool',
+      'Silk',
+      'Rayon',
+      'Leather'
+    ];
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                16,
+                16,
+                16,
+                MediaQuery.of(ctx).viewInsets.bottom + 24,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Edit Item', style: AppTypography.subheading(context)),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: nameCtrl,
+                      decoration: const InputDecoration(labelText: 'Name'),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: category,
+                      decoration: const InputDecoration(labelText: 'Category'),
+                      items: categories
+                          .map(
+                              (v) => DropdownMenuItem(value: v, child: Text(v)))
+                          .toList(),
+                      onChanged: (v) => setSheetState(() => category = v!),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: color,
+                      decoration: const InputDecoration(labelText: 'Color'),
+                      items: colors
+                          .map(
+                              (v) => DropdownMenuItem(value: v, child: Text(v)))
+                          .toList(),
+                      onChanged: (v) => setSheetState(() => color = v!),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: fabric,
+                      decoration: const InputDecoration(labelText: 'Fabric'),
+                      items: fabrics
+                          .map(
+                              (v) => DropdownMenuItem(value: v, child: Text(v)))
+                          .toList(),
+                      onChanged: (v) => setSheetState(() => fabric = v!),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: formality,
+                      decoration: const InputDecoration(labelText: 'Formality'),
+                      items: formalities
+                          .map(
+                              (v) => DropdownMenuItem(value: v, child: Text(v)))
+                          .toList(),
+                      onChanged: (v) => setSheetState(() => formality = v!),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () async {
+                              final ok = await wardrobe.deleteItem(item.id);
+                              if (!mounted) return;
+                              Navigator.pop(ctx);
+                              if (ok) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Item removed')),
+                                );
+                              }
+                            },
+                            child: const Text('Delete'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              final ok = await wardrobe.updateItem(
+                                itemId: item.id,
+                                name: nameCtrl.text.trim().isEmpty
+                                    ? null
+                                    : nameCtrl.text.trim(),
+                                category: category,
+                                color: color,
+                                fabric: fabric,
+                                formality: formality,
+                              );
+                              if (!mounted) return;
+                              Navigator.pop(ctx);
+                              if (ok) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Item updated')),
+                                );
+                              } else if (wardrobe.error != null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(wardrobe.error!)),
+                                );
+                              }
+                            },
+                            child: const Text('Save'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
 
 class _WardrobeCard extends StatelessWidget {
   final WardrobeItem item;
+  final VoidCallback onTap;
   final VoidCallback onDelete;
 
-  const _WardrobeCard({required this.item, required this.onDelete});
+  const _WardrobeCard({
+    required this.item,
+    required this.onTap,
+    required this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return FytCard(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            height: 56,
-            width: 56,
-            decoration: BoxDecoration(
-              color: AppColors.accentLavender.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(
-              item.category == 'Top'
-                  ? Icons.dry_cleaning_rounded
-                  : item.category == 'Bottom'
-                      ? Icons.straighten_rounded
-                      : item.category == 'Outerwear'
-                          ? Icons.layers_rounded
-                          : Icons.checkroom_rounded,
-              size: 28,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(item.name ?? item.category,
+    return GestureDetector(
+      onTap: onTap,
+      child: FytCard(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _WardrobeVisual(item: item),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              item.name ?? item.category,
               style: AppTypography.body(context)
                   .copyWith(fontWeight: FontWeight.w500),
               textAlign: TextAlign.center,
               maxLines: 1,
-              overflow: TextOverflow.ellipsis),
-          Text('${item.color} • ${item.formality}',
+              overflow: TextOverflow.ellipsis,
+            ),
+            Text(
+              '${item.color} • ${item.formality}',
               style: AppTypography.label(context),
               textAlign: TextAlign.center,
               maxLines: 1,
-              overflow: TextOverflow.ellipsis),
-          const SizedBox(height: 4),
-          GestureDetector(
-            onTap: onDelete,
-            child: const Icon(Icons.delete_outline_rounded,
-                size: 18, color: AppColors.textSub),
-          ),
-        ],
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 4),
+            GestureDetector(
+              onTap: onDelete,
+              child: const Icon(
+                Icons.delete_outline_rounded,
+                size: 18,
+                color: AppColors.textSub,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _WardrobeVisual extends StatelessWidget {
+  final WardrobeItem item;
+  const _WardrobeVisual({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    final path = item.imagePath;
+    if (path != null && path.isNotEmpty) {
+      final imageUrl = '${ApiService.baseUrl}$path';
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: Image.network(
+          imageUrl,
+          height: 72,
+          width: 72,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _fallbackIcon(),
+        ),
+      );
+    }
+    return _fallbackIcon();
+  }
+
+  Widget _fallbackIcon() {
+    return Container(
+      height: 56,
+      width: 56,
+      decoration: BoxDecoration(
+        color: AppColors.accentLavender.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Icon(
+        item.category == 'Top'
+            ? Icons.dry_cleaning_rounded
+            : item.category == 'Bottom'
+                ? Icons.straighten_rounded
+                : item.category == 'Outerwear'
+                    ? Icons.layers_rounded
+                    : Icons.checkroom_rounded,
+        size: 28,
+        color: AppColors.textPrimary,
       ),
     );
   }

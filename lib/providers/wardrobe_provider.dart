@@ -79,4 +79,38 @@ class WardrobeProvider extends ChangeNotifier {
       return false;
     }
   }
+
+  Future<bool> updateItem({
+    required int itemId,
+    String? name,
+    required String category,
+    required String color,
+    String? fabric,
+    required String formality,
+  }) async {
+    try {
+      final updated = await ApiService.updateWardrobeItem(
+        itemId: itemId,
+        name: name,
+        category: category,
+        color: color,
+        fabric: fabric,
+        formality: formality,
+      );
+      final idx = _items.indexWhere((i) => i.id == itemId);
+      if (idx >= 0) {
+        _items[idx] = updated;
+      }
+      notifyListeners();
+      return true;
+    } catch (e) {
+      final raw = e.toString().replaceAll('Exception: ', '');
+      _error = raw.contains('SocketException') ||
+              raw.contains('SocketConnection')
+          ? 'Cannot reach backend server. Open Settings and set a reachable Backend URL.'
+          : raw;
+      notifyListeners();
+      return false;
+    }
+  }
 }
