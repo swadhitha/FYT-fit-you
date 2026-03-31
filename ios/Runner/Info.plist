@@ -72,6 +72,11 @@
 	<string>Allow FYT to access your camera for body metric scanning.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Allow FYT to access your photo library to upload wardrobe items.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_dartobservatory._tcp</string>

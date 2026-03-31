@@ -5,10 +5,30 @@ import '../models/api_models.dart';
 
 /// Centralized API service for all backend communication.
 class ApiService {
-  // Change this to your backend URL
-  static const String baseUrl = 'http://192.0.0.2:8000'; // Physical device testing
-  // static const String baseUrl = 'http://192.0.0.3:8000'; // Previous IP
-  // static const String baseUrl = 'http://10.1.224.57:8000'; // Network IP
+  static String get baseUrl {
+    const envUrl = String.fromEnvironment('API_BASE_URL', defaultValue: '');
+    if (envUrl.isNotEmpty) {
+      return envUrl;
+    }
+    if (Platform.isAndroid) {
+      // Android emulator host loopback to local machine.
+      return 'http://10.0.2.2:8000';
+    }
+    // iOS simulator local backend.
+    return 'http://127.0.0.1:8000';
+  }
+
+  static String _extractError(http.Response response, String fallback) {
+    try {
+      final body = jsonDecode(response.body);
+      if (body is Map<String, dynamic> && body['detail'] != null) {
+        return body['detail'].toString();
+      }
+    } catch (_) {
+      // Non-JSON error body
+    }
+    return fallback;
+  }
 
   // ─── Users ───────────────────────────────────────────────
 
@@ -19,7 +39,8 @@ class ApiService {
     String stylePreference = 'Minimal',
     String climateRegion = 'Tropical',
   }) async {
-    final response = await http.post(
+    final response = await http
+        .post(
       Uri.parse('$baseUrl/api/users/register'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
@@ -29,9 +50,10 @@ class ApiService {
         'style_preference': stylePreference,
         'climate_region': climateRegion,
       }),
-    );
+    )
+        .timeout(const Duration(seconds: 20));
     if (response.statusCode != 200) {
-      throw Exception(jsonDecode(response.body)['detail'] ?? 'Registration failed');
+      throw Exception(_extractError(response, 'Registration failed'));
     }
     return User.fromJson(jsonDecode(response.body));
   }
@@ -40,19 +62,23 @@ class ApiService {
     required String email,
     required String password,
   }) async {
-    final response = await http.post(
+    final response = await http
+        .post(
       Uri.parse('$baseUrl/api/users/login'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'password': password}),
-    );
+    )
+        .timeout(const Duration(seconds: 20));
     if (response.statusCode != 200) {
-      throw Exception(jsonDecode(response.body)['detail'] ?? 'Login failed');
+      throw Exception(_extractError(response, 'Login failed'));
     }
     return User.fromJson(jsonDecode(response.body));
   }
 
   static Future<User> getUser(int userId) async {
-    final response = await http.get(Uri.parse('$baseUrl/api/users/$userId'));
+    final response = await http
+        .get(Uri.parse('$baseUrl/api/users/$userId'))
+        .timeout(const Duration(seconds: 20));
     if (response.statusCode != 200) throw Exception('User not found');
     return User.fromJson(jsonDecode(response.body));
   }
@@ -69,7 +95,8 @@ class ApiService {
     required double hipCm,
     required double inseamCm,
   }) async {
-    final response = await http.post(
+    final response = await http
+        .post(
       Uri.parse('$baseUrl/api/body-profile/$userId'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
@@ -81,16 +108,18 @@ class ApiService {
         'hip_cm': hipCm,
         'inseam_cm': inseamCm,
       }),
-    );
+    )
+        .timeout(const Duration(seconds: 20));
     if (response.statusCode != 200) {
-      throw Exception(jsonDecode(response.body)['detail'] ?? 'Analysis failed');
+      throw Exception(_extractError(response, 'Analysis failed'));
     }
     return BodyProfile.fromJson(jsonDecode(response.body));
   }
 
   static Future<BodyProfile?> getBodyProfile(int userId) async {
-    final response =
-        await http.get(Uri.parse('$baseUrl/api/body-profile/$userId'));
+    final response = await http
+        .get(Uri.parse('$baseUrl/api/body-profile/$userId'))
+        .timeout(const Duration(seconds: 20));
     if (response.statusCode == 404) return null;
     if (response.statusCode != 200) throw Exception('Failed to get profile');
     return BodyProfile.fromJson(jsonDecode(response.body));
@@ -108,7 +137,7 @@ class ApiService {
     final response = await http.Response.fromStream(streamedResponse);
 
     if (response.statusCode != 200) {
-      throw Exception(jsonDecode(response.body)['detail'] ?? 'Scan failed');
+      throw Exception(_extractError(response, 'Scan failed'));
     }
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
@@ -143,22 +172,24 @@ class ApiService {
     final response = await http.Response.fromStream(streamedResponse);
 
     if (response.statusCode != 200) {
-      throw Exception(jsonDecode(response.body)['detail'] ?? 'Failed to add item');
+      throw Exception(_extractError(response, 'Failed to add item'));
     }
     return WardrobeItem.fromJson(jsonDecode(response.body));
   }
 
   static Future<List<WardrobeItem>> getWardrobe(int userId) async {
-    final response =
-        await http.get(Uri.parse('$baseUrl/api/wardrobe/$userId'));
+    final response = await http
+        .get(Uri.parse('$baseUrl/api/wardrobe/$userId'))
+        .timeout(const Duration(seconds: 20));
     if (response.statusCode != 200) throw Exception('Failed to get wardrobe');
     final list = jsonDecode(response.body) as List;
     return list.map((j) => WardrobeItem.fromJson(j)).toList();
   }
 
   static Future<void> deleteWardrobeItem(int itemId) async {
-    final response =
-        await http.delete(Uri.parse('$baseUrl/api/wardrobe/item/$itemId'));
+    final response = await http
+        .delete(Uri.parse('$baseUrl/api/wardrobe/item/$itemId'))
+        .timeout(const Duration(seconds: 20));
     if (response.statusCode != 200) throw Exception('Failed to delete item');
   }
 
@@ -171,7 +202,8 @@ class ApiService {
     String? climate,
     String? additionalNotes,
   }) async {
-    final response = await http.post(
+    final response = await http
+        .post(
       Uri.parse('$baseUrl/api/recommendations/$userId'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
@@ -180,10 +212,10 @@ class ApiService {
         'climate': climate,
         'additional_notes': additionalNotes,
       }),
-    );
+    )
+        .timeout(const Duration(seconds: 30));
     if (response.statusCode != 200) {
-      throw Exception(
-          jsonDecode(response.body)['detail'] ?? 'Recommendation failed');
+      throw Exception(_extractError(response, 'Recommendation failed'));
     }
     return RecommendationResponse.fromJson(jsonDecode(response.body));
   }
@@ -195,23 +227,26 @@ class ApiService {
     required String message,
     Map<String, dynamic>? context,
   }) async {
-    final response = await http.post(
+    final response = await http
+        .post(
       Uri.parse('$baseUrl/api/chat/$userId'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'message': message,
         'context': context,
       }),
-    );
+    )
+        .timeout(const Duration(seconds: 30));
     if (response.statusCode != 200) {
-      throw Exception(jsonDecode(response.body)['detail'] ?? 'Chat failed');
+      throw Exception(_extractError(response, 'Chat failed'));
     }
     return ChatApiResponse.fromJson(jsonDecode(response.body));
   }
 
   static Future<List<Map<String, dynamic>>> getChatHistory(int userId) async {
-    final response =
-        await http.get(Uri.parse('$baseUrl/api/chat/$userId/history'));
+    final response = await http
+        .get(Uri.parse('$baseUrl/api/chat/$userId/history'))
+        .timeout(const Duration(seconds: 20));
     if (response.statusCode != 200) throw Exception('Failed to get history');
     return List<Map<String, dynamic>>.from(jsonDecode(response.body));
   }

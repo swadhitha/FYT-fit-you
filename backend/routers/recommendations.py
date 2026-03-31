@@ -124,7 +124,14 @@ async def recommendation_history(user_id: int):
             occasion=r["occasion"],
             outfit_items=json.loads(r["outfit_items"]),
             scores=json.loads(r["scores"]),
-            explanation=r["explanation"],
+            explanation=(
+                (
+                    "\n".join(parsed)
+                    if isinstance((parsed := json.loads(r["explanation"])), list)
+                    else str(parsed)
+                )
+                if r["explanation"] else None
+            ),
             saved=bool(r["saved"]),
             created_at=r["created_at"],
         )
