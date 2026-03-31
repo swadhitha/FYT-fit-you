@@ -6,9 +6,9 @@ import '../models/api_models.dart';
 /// Centralized API service for all backend communication.
 class ApiService {
   // Change this to your backend URL
-  static const String baseUrl = 'http://192.0.0.3:8000'; // Physical device testing
-  // static const String baseUrl = 'http://10.1.224.57:8000'; // Previous IP
-  // static const String baseUrl = 'http://10.0.2.2:8000'; // Android emulator
+  static const String baseUrl = 'http://192.0.0.2:8000'; // Physical device testing
+  // static const String baseUrl = 'http://192.0.0.3:8000'; // Previous IP
+  // static const String baseUrl = 'http://10.1.224.57:8000'; // Network IP
 
   // ─── Users ───────────────────────────────────────────────
 
