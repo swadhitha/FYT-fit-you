@@ -29,7 +29,14 @@ def classify_intent(message: str) -> str:
     msg = message.lower().strip()
 
     # Greeting
-    if any(w in msg for w in ["hi", "hello", "hey", "good morning", "good evening"]):
+    greeting_patterns = [
+        r"\bhi\b",
+        r"\bhello\b",
+        r"\bhey\b",
+        r"\bgood morning\b",
+        r"\bgood evening\b",
+    ]
+    if any(re.search(pattern, msg) for pattern in greeting_patterns):
         if len(msg.split()) <= 4:
             return "greeting"
 

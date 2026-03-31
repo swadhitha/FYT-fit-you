@@ -91,7 +91,8 @@ class BodyMetricProvider extends ChangeNotifier {
     try {
       final metrics = scanResult['metrics'] as Map<String, dynamic>;
       // Total vertical distance in normalized units (torso + leg)
-      final totalVert = (metrics['torso_length'] as double) + (metrics['leg_length'] as double);
+      final totalVert = (metrics['torso_length'] as num).toDouble() +
+          (metrics['leg_length'] as num).toDouble();
       
       // We assume targetHeight is the full height. 
       // Roughly, total body height is ~1.15 to 1.2 times the shoulder-to-ankle vertical distance.
@@ -99,10 +100,12 @@ class BodyMetricProvider extends ChangeNotifier {
       final shoulderCm = scaleFactor; // Since shoulder is 1.0 in normalized units
       
       final shoulderWidth = shoulderCm;
-      final hipCm = (metrics['hip_width'] as double) * shoulderWidth;
-      final waistCm = (metrics['waist_ratio'] as double) * shoulderWidth; // Heuristic
+      final hipCm = (metrics['hip_width'] as num).toDouble() * shoulderWidth;
+      final waistCm =
+          (metrics['waist_ratio'] as num).toDouble() * shoulderWidth; // Heuristic
       final chestCm = (shoulderWidth + waistCm) / 2; // Heuristic
-      final inseamCm = (metrics['leg_length'] as double) * shoulderWidth;
+      final inseamCm =
+          (metrics['leg_length'] as num).toDouble() * shoulderWidth;
 
       _profile = await ApiService.saveBodyProfile(
         userId: userId,
