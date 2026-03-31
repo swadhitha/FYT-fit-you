@@ -16,11 +16,13 @@ class HomeDashboardScreen extends StatefulWidget {
 
 class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
   FytTab _tab = FytTab.home;
-<<<<<<< HEAD
-  final String userName = 'Niru';
-=======
-  final String userName = 'Ramesh Sir';
->>>>>>> feature/body-metric-module-clean
+
+  String _greeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good Morning';
+    if (hour < 17) return 'Good Afternoon';
+    return 'Good Evening';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,11 +39,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-<<<<<<< HEAD
-                  Text('Good Morning, $userName ☀️',
-=======
-                  Text('Good Afternoon, $userName ☀️',
->>>>>>> feature/body-metric-module-clean
+                  Text('${_greeting()} ☀️',
                       style: AppTypography.heading(context)),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
@@ -58,6 +56,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                         _HomeCard(
                           icon: Icons.person_outline_rounded,
                           title: 'Body Blueprint',
+                          subtitle: 'Analyze your proportions',
                           onTap: () => Navigator.pushNamed(
                             context,
                             AppRoutes.bodyIntro,
@@ -66,6 +65,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                         _HomeCard(
                           icon: Icons.calendar_month_rounded,
                           title: 'Occasion Mode',
+                          subtitle: 'Get styled for events',
                           onTap: () => Navigator.pushNamed(
                             context,
                             AppRoutes.occasionSelection,
@@ -74,6 +74,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                         _HomeCard(
                           icon: Icons.chat_bubble_rounded,
                           title: 'Ask Your Stylist',
+                          subtitle: 'AI-powered advice',
                           onTap: () => Navigator.pushNamed(
                             context,
                             AppRoutes.aiChat,
@@ -82,6 +83,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                         _HomeCard(
                           icon: Icons.checkroom_rounded,
                           title: 'Smart Closet',
+                          subtitle: 'Manage your wardrobe',
                           onTap: () => Navigator.pushNamed(
                             context,
                             AppRoutes.smartCloset,
@@ -103,7 +105,9 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
           if (tab == FytTab.profile) {
             Navigator.pushNamed(context, AppRoutes.profile);
           }
-          // Settings tab would route to settings screen if added.
+          if (tab == FytTab.settings) {
+            Navigator.pushNamed(context, AppRoutes.settings);
+          }
         },
       ),
     );
@@ -113,12 +117,14 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
 class _HomeCard extends StatelessWidget {
   final IconData icon;
   final String title;
+  final String subtitle;
   final VoidCallback onTap;
 
   const _HomeCard({
     required this.icon,
     required this.title,
     required this.onTap,
+    this.subtitle = '',
   });
 
   @override
@@ -128,11 +134,25 @@ class _HomeCard extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 32, color: AppColors.textPrimary),
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: AppColors.accentLavender.withOpacity(0.25),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(icon, size: 28, color: AppColors.textPrimary),
+          ),
           const SizedBox(height: AppSpacing.sm),
           Text(title,
               style: AppTypography.subheading(context),
               textAlign: TextAlign.center),
+          if (subtitle.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(subtitle,
+                style: AppTypography.label(context),
+                textAlign: TextAlign.center),
+          ],
         ],
       ),
     );

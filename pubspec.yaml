@@ -1,7 +1,7 @@
 name: my_flutter_app
-description: A Flutter app
+description: FYT - AI-Based Personal Styling Application
 publish_to: "none"
-version: 0.0.1
+version: 1.0.0
 
 environment:
   sdk: ">=2.18.0 <4.0.0"
@@ -10,6 +10,11 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.2
+  http: ^1.2.0
+  provider: ^6.1.1
+  image_picker: ^1.0.7
+  shared_preferences: ^2.2.2
+  path_provider: ^2.1.2
 
 dev_dependencies:
   flutter_test:

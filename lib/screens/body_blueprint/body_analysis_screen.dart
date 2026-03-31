@@ -1,17 +1,12 @@
-<<<<<<< HEAD
-// ...existing code...
 import 'package:flutter/material.dart';
-import 'package:my_flutter_app/routing/app_router.dart';
-import 'package:my_flutter_app/design/app_spacing.dart';
-import 'package:my_flutter_app/design/app_typography.dart';
-=======
-import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:my_flutter_app/design/app_spacing.dart';
 import 'package:my_flutter_app/design/app_typography.dart';
 import 'package:my_flutter_app/features/body_metrics/models/body_measurement_input.dart';
-import 'package:my_flutter_app/features/body_metrics/services/body_metric_analyzer.dart';
+import 'package:my_flutter_app/features/body_metrics/models/body_metric_result.dart';
 import 'package:my_flutter_app/routing/app_router.dart';
->>>>>>> feature/body-metric-module-clean
+import 'package:my_flutter_app/providers/body_metric_provider.dart';
+import 'package:my_flutter_app/providers/user_provider.dart';
 
 class BodyAnalysisScreen extends StatefulWidget {
   const BodyAnalysisScreen({super.key});
@@ -21,50 +16,70 @@ class BodyAnalysisScreen extends StatefulWidget {
 }
 
 class _BodyAnalysisScreenState extends State<BodyAnalysisScreen> {
-<<<<<<< HEAD
-  @override
-  void initState() {
-    super.initState();
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, AppRoutes.bodyResult);
-=======
-  final _analyzer = const BodyMetricAnalyzer();
   bool _started = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_started) {
-      return;
-    }
+    if (_started) return;
     _started = true;
 
+    _runAnalysis();
+  }
+
+  Future<void> _runAnalysis() async {
     final args = ModalRoute.of(context)?.settings.arguments;
-    final input = args is BodyMeasurementInput
-        ? args
-        : const BodyMeasurementInput(
-            heightCm: 170,
-            weightKg: 68,
-            shoulderCm: 42,
-            chestCm: 92,
-            waistCm: 78,
-            hipCm: 94,
-            inseamCm: 79,
-          );
+    final userId = context.read<UserProvider>().userId;
+    final bodyProvider = context.read<BodyMetricProvider>();
 
-    final result = _analyzer.analyze(input);
+    bool success = false;
 
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        Navigator.pushReplacementNamed(
-          context,
-          AppRoutes.bodyResult,
-          arguments: result,
-        );
->>>>>>> feature/body-metric-module-clean
-      }
-    });
+    if (args is Map<String, dynamic>) {
+      // It's a scan result
+      success = await bodyProvider.saveProfileFromScan(
+        userId: userId,
+        scanResult: args,
+      );
+    } else if (args is BodyMeasurementInput) {
+      // Manual input
+      success = await bodyProvider.saveProfile(
+        userId: userId,
+        heightCm: args.heightCm,
+        weightKg: args.weightKg,
+        shoulderCm: args.shoulderCm,
+        chestCm: args.chestCm,
+        waistCm: args.waistCm,
+        hipCm: args.hipCm,
+        inseamCm: args.inseamCm,
+      );
+    }
+
+    if (!mounted) return;
+
+    if (success && bodyProvider.profile != null) {
+      final p = bodyProvider.profile!;
+      final result = BodyMetricResult(
+        bodyType: p.bodyType,
+        bmi: p.bmi,
+        bmiCategory: p.bmiCategory,
+        shoulderToHipRatio: p.shoulderToHipRatio,
+        waistToHipRatio: p.waistToHipRatio,
+        legToHeightRatio: p.legToHeightRatio,
+        proportionSummary: p.proportionSummary,
+        stylingSuggestions: p.stylingSuggestions,
+      );
+
+      Navigator.pushReplacementNamed(
+        context,
+        AppRoutes.bodyResult,
+        arguments: result,
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(bodyProvider.error ?? 'Analysis failed')),
+      );
+      Navigator.pop(context);
+    }
   }
 
   @override
@@ -79,19 +94,11 @@ class _BodyAnalysisScreenState extends State<BodyAnalysisScreen> {
               children: [
                 const CircularProgressIndicator(),
                 const SizedBox(height: AppSpacing.lg),
-<<<<<<< HEAD
-                Text('Analyzing proportions…',
+                Text('FYT Intelligence at work...',
                     style: AppTypography.subheading(context)),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
-                  'FYT is reading your shoulder, waist, and leg balance to understand your natural lines.',
-=======
-                Text('Analyzing proportions...',
-                    style: AppTypography.subheading(context)),
-                const SizedBox(height: AppSpacing.sm),
-                Text(
-                  'FYT is processing shoulder, waist, hip, and leg proportions to build your body metric profile.',
->>>>>>> feature/body-metric-module-clean
+                  'Processing proportions to build your body metric profile.',
                   style: AppTypography.body(context),
                   textAlign: TextAlign.center,
                 ),
@@ -103,7 +110,3 @@ class _BodyAnalysisScreenState extends State<BodyAnalysisScreen> {
     );
   }
 }
-<<<<<<< HEAD
-// ...existing code...
-=======
->>>>>>> feature/body-metric-module-clean

@@ -1,20 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../design/app_spacing.dart';
 import '../../design/app_typography.dart';
 import '../../widgets/fyt_text_field.dart';
 import '../../widgets/fyt_button.dart';
 import '../../routing/app_router.dart';
+import '../../providers/user_provider.dart';
 
-class ProfileSetupScreen extends StatelessWidget {
+class ProfileSetupScreen extends StatefulWidget {
   const ProfileSetupScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final styleOptions = ['Minimal', 'Classic', 'Bold'];
-    String? selectedStyle;
-    String? climateRegion;
+  State<ProfileSetupScreen> createState() => _ProfileSetupScreenState();
+}
 
-    // For brevity, using StatelessWidget; in real code use Stateful or state mgmt.
+class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
+  String _selectedStyle = 'Minimal';
+  String _climateRegion = 'Tropical';
+
+  final _styles = ['Minimal', 'Classic', 'Bold'];
+  final _climates = ['Temperate', 'Tropical', 'Dry', 'Cold'];
+
+  @override
+  Widget build(BuildContext context) {
+    final user = context.watch<UserProvider>().user;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Profile Setup')),
@@ -26,24 +35,25 @@ class ProfileSetupScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Tell FYT about you',
-                    style: AppTypography.heading(context)),
+                Text(
+                  user != null
+                      ? 'Welcome, ${user.name}!'
+                      : 'Tell FYT about you',
+                  style: AppTypography.heading(context),
+                ),
                 const SizedBox(height: AppSpacing.xl),
-                const FytTextField(label: 'Name'),
-                const SizedBox(height: AppSpacing.lg),
                 Text('Style preference',
                     style: AppTypography.label(context)),
                 const SizedBox(height: AppSpacing.sm),
                 Wrap(
                   spacing: AppSpacing.sm,
-                  children: styleOptions
-                      .map(
-                        (s) => ChoiceChip(
-                          label: Text(s),
-                          selected: selectedStyle == s,
-                          onSelected: (_) {},
-                        ),
-                      )
+                  children: _styles
+                      .map((s) => ChoiceChip(
+                            label: Text(s),
+                            selected: _selectedStyle == s,
+                            onSelected: (_) =>
+                                setState(() => _selectedStyle = s),
+                          ))
                       .toList(),
                 ),
                 const SizedBox(height: AppSpacing.lg),
@@ -52,28 +62,18 @@ class ProfileSetupScreen extends StatelessWidget {
                 const SizedBox(height: AppSpacing.sm),
                 DropdownButtonFormField<String>(
                   decoration: const InputDecoration(),
-                  value: climateRegion,
-                  items: const [
-                    DropdownMenuItem(
-                        value: 'Temperate',
-                        child: Text('Temperate')),
-                    DropdownMenuItem(
-                        value: 'Tropical',
-                        child: Text('Tropical')),
-                    DropdownMenuItem(
-                        value: 'Dry',
-                        child: Text('Dry')),
-                    DropdownMenuItem(
-                        value: 'Cold',
-                        child: Text('Cold')),
-                  ],
-                  onChanged: (_) {},
+                  value: _climateRegion,
+                  items: _climates
+                      .map((c) =>
+                          DropdownMenuItem(value: c, child: Text(c)))
+                      .toList(),
+                  onChanged: (v) =>
+                      setState(() => _climateRegion = v ?? 'Tropical'),
                 ),
                 const Spacer(),
                 FytButton(
                   label: 'Continue',
-                  onPressed: () =>
-                      Navigator.pushReplacementNamed(
+                  onPressed: () => Navigator.pushReplacementNamed(
                     context,
                     AppRoutes.home,
                   ),
