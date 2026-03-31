@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../design/app_spacing.dart';
 import '../../design/app_typography.dart';
-import '../../widgets/fyt_text_field.dart';
 import '../../widgets/fyt_button.dart';
 import '../../routing/app_router.dart';
 import '../../providers/user_provider.dart';
