@@ -70,6 +70,15 @@ class BodyProfileResponse(BaseModel):
     styling_suggestions: List[str] = []
 
 
+class BodyScanPersistRequest(BaseModel):
+    metrics: dict
+    body_type: str
+    symmetry: float
+    posture_angle: float
+    estimated_height_cm: float = 170.0
+    estimated_weight_kg: float = 68.0
+
+
 # ─── Wardrobe Schemas ──────────────────────────────────────────
 
 class WardrobeItemCreate(BaseModel):
