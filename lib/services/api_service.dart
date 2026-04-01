@@ -31,18 +31,39 @@ class ApiService {
     if (value == null) return null;
     final trimmed = value.trim();
     if (trimmed.isEmpty) return null;
-    return trimmed.endsWith('/')
-        ? trimmed.substring(0, trimmed.length - 1)
-        : trimmed;
+    final hasScheme =
+        trimmed.startsWith('http://') || trimmed.startsWith('https://');
+    final isLocalLike = trimmed.startsWith('localhost') ||
+        trimmed.startsWith('127.') ||
+        trimmed.startsWith('10.') ||
+        trimmed.startsWith('192.168.') ||
+        RegExp(r'^172\.(1[6-9]|2\d|3[0-1])\.').hasMatch(trimmed);
+    final withScheme =
+        hasScheme ? trimmed : '${isLocalLike ? 'http' : 'https'}://$trimmed';
+    final parsed = Uri.tryParse(withScheme);
+    if (parsed == null || parsed.host.isEmpty) {
+      return null;
+    }
+    // Keep only API root origin. This avoids bad values like /healthz in Settings.
+    final origin = Uri(
+      scheme: parsed.scheme,
+      host: parsed.host,
+      port: parsed.hasPort ? parsed.port : null,
+    ).toString();
+    return origin.endsWith('/')
+        ? origin.substring(0, origin.length - 1)
+        : origin;
   }
 
   static String get baseUrl {
     const envUrl = String.fromEnvironment('API_BASE_URL', defaultValue: '');
-    if (envUrl.isNotEmpty) {
-      return envUrl;
-    }
+    // Runtime value from Settings must win so users can switch tunnel URLs
+    // without rebuilding the app.
     if (_runtimeBaseUrl != null && _runtimeBaseUrl!.isNotEmpty) {
       return _runtimeBaseUrl!;
+    }
+    if (envUrl.isNotEmpty) {
+      return envUrl;
     }
     if (Platform.isAndroid) {
       // Android emulator host loopback to local machine.
@@ -61,7 +82,29 @@ class ApiService {
     } catch (_) {
       // Non-JSON error body
     }
+    final raw = response.body.trimLeft();
+    if (raw.startsWith('<html') || raw.startsWith('<!DOCTYPE html')) {
+      return 'Backend returned HTML, not JSON. In Settings use only the root URL (e.g. https://<tunnel>.trycloudflare.com), not /healthz.';
+    }
     return fallback;
+  }
+
+  static dynamic _decodeJsonOrThrow(http.Response response, String fallback) {
+    if (response.statusCode != 200) {
+      throw Exception(_extractError(response, fallback));
+    }
+    try {
+      return jsonDecode(response.body);
+    } on FormatException {
+      final raw = response.body.trimLeft();
+      if (raw.startsWith('<html') || raw.startsWith('<!DOCTYPE html')) {
+        throw Exception(
+          'Backend URL is incorrect. Use only root URL in Settings: https://<tunnel>.trycloudflare.com (no /healthz).',
+        );
+      }
+      throw Exception(
+          'Invalid server response. Please verify backend URL in Settings.');
+    }
   }
 
   // ─── Users ───────────────────────────────────────────────
@@ -86,10 +129,8 @@ class ApiService {
           }),
         )
         .timeout(const Duration(seconds: 20));
-    if (response.statusCode != 200) {
-      throw Exception(_extractError(response, 'Registration failed'));
-    }
-    return User.fromJson(jsonDecode(response.body));
+    final body = _decodeJsonOrThrow(response, 'Registration failed');
+    return User.fromJson(body as Map<String, dynamic>);
   }
 
   static Future<User> login({
@@ -103,18 +144,38 @@ class ApiService {
           body: jsonEncode({'email': email, 'password': password}),
         )
         .timeout(const Duration(seconds: 20));
-    if (response.statusCode != 200) {
-      throw Exception(_extractError(response, 'Login failed'));
-    }
-    return User.fromJson(jsonDecode(response.body));
+    final body = _decodeJsonOrThrow(response, 'Login failed');
+    return User.fromJson(body as Map<String, dynamic>);
   }
 
   static Future<User> getUser(int userId) async {
     final response = await http
         .get(Uri.parse('$baseUrl/api/users/$userId'))
         .timeout(const Duration(seconds: 20));
-    if (response.statusCode != 200) throw Exception('User not found');
-    return User.fromJson(jsonDecode(response.body));
+    final body = _decodeJsonOrThrow(response, 'User not found');
+    return User.fromJson(body as Map<String, dynamic>);
+  }
+
+  static Future<User> updateUser({
+    required int userId,
+    String? name,
+    String? stylePreference,
+    String? climateRegion,
+  }) async {
+    final payload = <String, dynamic>{};
+    if (name != null) payload['name'] = name;
+    if (stylePreference != null) payload['style_preference'] = stylePreference;
+    if (climateRegion != null) payload['climate_region'] = climateRegion;
+
+    final response = await http
+        .put(
+          Uri.parse('$baseUrl/api/users/$userId'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(payload),
+        )
+        .timeout(const Duration(seconds: 20));
+    final body = _decodeJsonOrThrow(response, 'Failed to update profile');
+    return User.fromJson(body as Map<String, dynamic>);
   }
 
   // ─── Body Profile ───────────────────────────────────────
@@ -144,10 +205,8 @@ class ApiService {
           }),
         )
         .timeout(const Duration(seconds: 20));
-    if (response.statusCode != 200) {
-      throw Exception(_extractError(response, 'Analysis failed'));
-    }
-    return BodyProfile.fromJson(jsonDecode(response.body));
+    final body = _decodeJsonOrThrow(response, 'Analysis failed');
+    return BodyProfile.fromJson(body as Map<String, dynamic>);
   }
 
   static Future<BodyProfile?> getBodyProfile(int userId) async {
@@ -155,8 +214,8 @@ class ApiService {
         .get(Uri.parse('$baseUrl/api/body-profile/$userId'))
         .timeout(const Duration(seconds: 20));
     if (response.statusCode == 404) return null;
-    if (response.statusCode != 200) throw Exception('Failed to get profile');
-    return BodyProfile.fromJson(jsonDecode(response.body));
+    final body = _decodeJsonOrThrow(response, 'Failed to get profile');
+    return BodyProfile.fromJson(body as Map<String, dynamic>);
   }
 
   static Future<Map<String, dynamic>> scanBody({
@@ -171,10 +230,8 @@ class ApiService {
     final streamedResponse = await request.send();
     final response = await http.Response.fromStream(streamedResponse);
 
-    if (response.statusCode != 200) {
-      throw Exception(_extractError(response, 'Scan failed'));
-    }
-    return jsonDecode(response.body) as Map<String, dynamic>;
+    final body = _decodeJsonOrThrow(response, 'Scan failed');
+    return body as Map<String, dynamic>;
   }
 
   static Future<BodyProfile> saveBodyProfileFromScan({
@@ -197,11 +254,8 @@ class ApiService {
           }),
         )
         .timeout(const Duration(seconds: 20));
-    if (response.statusCode != 200) {
-      throw Exception(
-          _extractError(response, 'Failed to save scanned profile'));
-    }
-    return BodyProfile.fromJson(jsonDecode(response.body));
+    final body = _decodeJsonOrThrow(response, 'Failed to save scanned profile');
+    return BodyProfile.fromJson(body as Map<String, dynamic>);
   }
 
   // ─── Wardrobe ────────────────────────────────────────────
@@ -233,26 +287,34 @@ class ApiService {
     final streamedResponse = await request.send();
     final response = await http.Response.fromStream(streamedResponse);
 
-    if (response.statusCode != 200) {
-      throw Exception(_extractError(response, 'Failed to add item'));
-    }
-    return WardrobeItem.fromJson(jsonDecode(response.body));
+    final body = _decodeJsonOrThrow(response, 'Failed to add item');
+    return WardrobeItem.fromJson(body as Map<String, dynamic>);
   }
 
   static Future<List<WardrobeItem>> getWardrobe(int userId) async {
     final response = await http
         .get(Uri.parse('$baseUrl/api/wardrobe/$userId'))
         .timeout(const Duration(seconds: 20));
-    if (response.statusCode != 200) throw Exception('Failed to get wardrobe');
-    final list = jsonDecode(response.body) as List;
+    final body = _decodeJsonOrThrow(response, 'Failed to get wardrobe');
+    final list = body as List;
     return list.map((j) => WardrobeItem.fromJson(j)).toList();
+  }
+
+  static Future<WardrobeStatsModel> getWardrobeStats(int userId) async {
+    final response = await http
+        .get(Uri.parse('$baseUrl/api/wardrobe/$userId/stats'))
+        .timeout(const Duration(seconds: 20));
+    final body = _decodeJsonOrThrow(response, 'Failed to fetch wardrobe stats');
+    return WardrobeStatsModel.fromJson(body as Map<String, dynamic>);
   }
 
   static Future<void> deleteWardrobeItem(int itemId) async {
     final response = await http
         .delete(Uri.parse('$baseUrl/api/wardrobe/item/$itemId'))
         .timeout(const Duration(seconds: 20));
-    if (response.statusCode != 200) throw Exception('Failed to delete item');
+    if (response.statusCode != 200) {
+      throw Exception(_extractError(response, 'Failed to delete item'));
+    }
   }
 
   static Future<WardrobeItem> updateWardrobeItem({
@@ -276,10 +338,8 @@ class ApiService {
           }),
         )
         .timeout(const Duration(seconds: 20));
-    if (response.statusCode != 200) {
-      throw Exception(_extractError(response, 'Failed to update item'));
-    }
-    return WardrobeItem.fromJson(jsonDecode(response.body));
+    final body = _decodeJsonOrThrow(response, 'Failed to update item');
+    return WardrobeItem.fromJson(body as Map<String, dynamic>);
   }
 
   // ─── Recommendations ────────────────────────────────────
@@ -303,10 +363,8 @@ class ApiService {
           }),
         )
         .timeout(const Duration(seconds: 30));
-    if (response.statusCode != 200) {
-      throw Exception(_extractError(response, 'Recommendation failed'));
-    }
-    return RecommendationResponse.fromJson(jsonDecode(response.body));
+    final body = _decodeJsonOrThrow(response, 'Recommendation failed');
+    return RecommendationResponse.fromJson(body as Map<String, dynamic>);
   }
 
   // ─── Chat ───────────────────────────────────────────────
@@ -326,17 +384,67 @@ class ApiService {
           }),
         )
         .timeout(const Duration(seconds: 30));
-    if (response.statusCode != 200) {
-      throw Exception(_extractError(response, 'Chat failed'));
-    }
-    return ChatApiResponse.fromJson(jsonDecode(response.body));
+    final body = _decodeJsonOrThrow(response, 'Chat failed');
+    return ChatApiResponse.fromJson(body as Map<String, dynamic>);
   }
 
   static Future<List<Map<String, dynamic>>> getChatHistory(int userId) async {
     final response = await http
         .get(Uri.parse('$baseUrl/api/chat/$userId/history'))
         .timeout(const Duration(seconds: 20));
-    if (response.statusCode != 200) throw Exception('Failed to get history');
-    return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+    final body = _decodeJsonOrThrow(response, 'Failed to get history');
+    return List<Map<String, dynamic>>.from(body);
+  }
+
+  // ─── Preferences ─────────────────────────────────────────
+
+  static Future<UserPreferences> getPreferences(int userId) async {
+    final response = await http
+        .get(Uri.parse('$baseUrl/api/preferences/$userId'))
+        .timeout(const Duration(seconds: 20));
+    final body = _decodeJsonOrThrow(response, 'Failed to fetch preferences');
+    return UserPreferences.fromJson(body as Map<String, dynamic>);
+  }
+
+  static Future<UserPreferences> updatePreferences({
+    required int userId,
+    List<String>? preferredColors,
+    List<String>? dislikedColors,
+    List<String>? preferredStyles,
+    String? preferredFormality,
+    double? comfortPriority,
+    double? confidencePriority,
+  }) async {
+    final payload = <String, dynamic>{};
+    if (preferredColors != null) payload['preferred_colors'] = preferredColors;
+    if (dislikedColors != null) payload['disliked_colors'] = dislikedColors;
+    if (preferredStyles != null) payload['preferred_styles'] = preferredStyles;
+    if (preferredFormality != null) {
+      payload['preferred_formality'] = preferredFormality;
+    }
+    if (comfortPriority != null) payload['comfort_priority'] = comfortPriority;
+    if (confidencePriority != null) {
+      payload['confidence_priority'] = confidencePriority;
+    }
+
+    final response = await http
+        .put(
+          Uri.parse('$baseUrl/api/preferences/$userId'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(payload),
+        )
+        .timeout(const Duration(seconds: 20));
+    final body = _decodeJsonOrThrow(response, 'Failed to update preferences');
+    return UserPreferences.fromJson(body as Map<String, dynamic>);
+  }
+
+  // ─── Connectivity ────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> checkBackendHealth() async {
+    final response = await http
+        .get(Uri.parse('$baseUrl/healthz'))
+        .timeout(const Duration(seconds: 8));
+    final body = _decodeJsonOrThrow(response, 'Backend health check failed');
+    return body as Map<String, dynamic>;
   }
 }

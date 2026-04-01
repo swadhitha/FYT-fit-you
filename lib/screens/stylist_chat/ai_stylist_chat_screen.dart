@@ -4,6 +4,7 @@ import '../../design/app_colors.dart';
 import '../../design/app_spacing.dart';
 import '../../design/app_typography.dart';
 import '../../providers/chat_provider.dart';
+import '../../providers/recommendation_provider.dart';
 import '../../providers/user_provider.dart';
 
 class AiStylistChatScreen extends StatefulWidget {
@@ -49,7 +50,29 @@ class _AiStylistChatScreenState extends State<AiStylistChatScreen> {
     _controller.clear();
 
     final userId = context.read<UserProvider>().userId;
-    await context.read<ChatProvider>().sendMessage(userId, text.trim());
+    final rec = context.read<RecommendationProvider>().recommendation;
+    Map<String, dynamic>? chatContext;
+    if (rec != null && rec.outfits.isNotEmpty) {
+      final top = rec.outfits.first;
+      chatContext = {
+        'occasion': rec.occasion,
+        'mood': rec.mood,
+        'explanation': top.explanation,
+        'scores': top.scores,
+        'items': top.items
+            .map((i) => {
+                  'id': i.id,
+                  'name': i.name,
+                  'category': i.category,
+                  'color': i.color,
+                  'formality': i.formality,
+                })
+            .toList(),
+      };
+    }
+    await context
+        .read<ChatProvider>()
+        .sendMessage(userId, text.trim(), context: chatContext);
     _scrollToBottom();
   }
 
@@ -78,15 +101,14 @@ class _AiStylistChatScreenState extends State<AiStylistChatScreen> {
                       itemBuilder: (context, index) {
                         if (index == messages.length && loading) {
                           return Padding(
-                            padding:
-                                const EdgeInsets.symmetric(vertical: 8),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
                             child: Row(
                               children: [
                                 const SizedBox(
                                   width: 16,
                                   height: 16,
-                                  child: CircularProgressIndicator(
-                                      strokeWidth: 2),
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
                                 ),
                                 const SizedBox(width: 8),
                                 Text('Stylist is thinking…',
@@ -110,15 +132,14 @@ class _AiStylistChatScreenState extends State<AiStylistChatScreen> {
                 height: 44,
                 child: ListView(
                   scrollDirection: Axis.horizontal,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   children: suggestions
                       .map((s) => Padding(
-                            padding: const EdgeInsets.only(
-                                right: AppSpacing.xs),
+                            padding:
+                                const EdgeInsets.only(right: AppSpacing.xs),
                             child: ActionChip(
-                              label: Text(s,
-                                  style: const TextStyle(fontSize: 13)),
+                              label:
+                                  Text(s, style: const TextStyle(fontSize: 13)),
                               onPressed: () => _send(s),
                               backgroundColor: AppColors.bgSecondary,
                             ),
@@ -173,8 +194,7 @@ class _AiStylistChatScreenState extends State<AiStylistChatScreen> {
                 size: 32, color: AppColors.textPrimary),
           ),
           const SizedBox(height: AppSpacing.md),
-          Text('Your AI Stylist',
-              style: AppTypography.subheading(context)),
+          Text('Your AI Stylist', style: AppTypography.subheading(context)),
           const SizedBox(height: AppSpacing.sm),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 48),

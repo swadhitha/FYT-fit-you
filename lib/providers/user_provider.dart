@@ -64,6 +64,44 @@ class UserProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<bool> refreshUser() async {
+    if (_user == null) return false;
+    try {
+      _user = await ApiService.getUser(_user!.id);
+      notifyListeners();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> updateProfile({
+    String? name,
+    String? stylePreference,
+    String? climateRegion,
+  }) async {
+    if (_user == null) return false;
+    _loading = true;
+    _error = null;
+    notifyListeners();
+    try {
+      _user = await ApiService.updateUser(
+        userId: _user!.id,
+        name: name,
+        stylePreference: stylePreference,
+        climateRegion: climateRegion,
+      );
+      _loading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString().replaceAll('Exception: ', '');
+      _loading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   void logout() {
     _user = null;
     notifyListeners();

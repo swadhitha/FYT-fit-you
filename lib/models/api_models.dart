@@ -29,11 +29,11 @@ class User {
   }
 
   Map<String, dynamic> toJson() => {
-    'name': name,
-    'email': email,
-    'style_preference': stylePreference,
-    'climate_region': climateRegion,
-  };
+        'name': name,
+        'email': email,
+        'style_preference': stylePreference,
+        'climate_region': climateRegion,
+      };
 }
 
 // ─── Body Profile ──────────────────────────────────────────
@@ -184,7 +184,8 @@ class OutfitSuggestion {
   factory OutfitSuggestion.fromJson(Map<String, dynamic> json) {
     return OutfitSuggestion(
       rank: json['rank'],
-      items: (json['items'] as List).map((i) => OutfitItem.fromJson(i)).toList(),
+      items:
+          (json['items'] as List).map((i) => OutfitItem.fromJson(i)).toList(),
       scores: Map<String, dynamic>.from(json['scores']),
       explanation: List<String>.from(json['explanation']),
     );
@@ -254,6 +255,57 @@ class ChatApiResponse {
       intent: json['intent'],
       extractedPreferences: json['extracted_preferences'],
       suggestions: List<String>.from(json['suggestions'] ?? []),
+    );
+  }
+}
+
+class UserPreferences {
+  final int userId;
+  final List<String> preferredColors;
+  final List<String> dislikedColors;
+  final List<String> preferredStyles;
+  final String preferredFormality;
+  final double comfortPriority;
+  final double confidencePriority;
+
+  UserPreferences({
+    required this.userId,
+    required this.preferredColors,
+    required this.dislikedColors,
+    required this.preferredStyles,
+    required this.preferredFormality,
+    required this.comfortPriority,
+    required this.confidencePriority,
+  });
+
+  factory UserPreferences.fromJson(Map<String, dynamic> json) {
+    return UserPreferences(
+      userId: json['user_id'],
+      preferredColors: List<String>.from(json['preferred_colors'] ?? []),
+      dislikedColors: List<String>.from(json['disliked_colors'] ?? []),
+      preferredStyles: List<String>.from(json['preferred_styles'] ?? []),
+      preferredFormality: json['preferred_formality'] ?? 'Smart Casual',
+      comfortPriority: (json['comfort_priority'] as num?)?.toDouble() ?? 0.5,
+      confidencePriority:
+          (json['confidence_priority'] as num?)?.toDouble() ?? 0.5,
+    );
+  }
+}
+
+class WardrobeStatsModel {
+  final int totalItems;
+  final Map<String, dynamic> categoryBreakdown;
+
+  WardrobeStatsModel({
+    required this.totalItems,
+    required this.categoryBreakdown,
+  });
+
+  factory WardrobeStatsModel.fromJson(Map<String, dynamic> json) {
+    return WardrobeStatsModel(
+      totalItems: json['total_items'] ?? 0,
+      categoryBreakdown:
+          Map<String, dynamic>.from(json['category_breakdown'] ?? {}),
     );
   }
 }

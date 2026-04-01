@@ -22,7 +22,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<UserProvider>().user;
+    final userProvider = context.watch<UserProvider>();
+    final user = userProvider.user;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Profile Setup')),
@@ -41,8 +42,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   style: AppTypography.heading(context),
                 ),
                 const SizedBox(height: AppSpacing.xl),
-                Text('Style preference',
-                    style: AppTypography.label(context)),
+                Text('Style preference', style: AppTypography.label(context)),
                 const SizedBox(height: AppSpacing.sm),
                 Wrap(
                   spacing: AppSpacing.sm,
@@ -56,15 +56,13 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                       .toList(),
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                Text('Climate region',
-                    style: AppTypography.label(context)),
+                Text('Climate region', style: AppTypography.label(context)),
                 const SizedBox(height: AppSpacing.sm),
                 DropdownButtonFormField<String>(
                   decoration: const InputDecoration(),
                   value: _climateRegion,
                   items: _climates
-                      .map((c) =>
-                          DropdownMenuItem(value: c, child: Text(c)))
+                      .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                       .toList(),
                   onChanged: (v) =>
                       setState(() => _climateRegion = v ?? 'Tropical'),
@@ -72,10 +70,20 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 const Spacer(),
                 FytButton(
                   label: 'Continue',
-                  onPressed: () => Navigator.pushReplacementNamed(
-                    context,
-                    AppRoutes.home,
-                  ),
+                  onPressed: () async {
+                    final ok = await context.read<UserProvider>().updateProfile(
+                          stylePreference: _selectedStyle,
+                          climateRegion: _climateRegion,
+                        );
+                    if (!mounted) return;
+                    if (!ok && userProvider.error != null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(userProvider.error!)),
+                      );
+                      return;
+                    }
+                    Navigator.pushReplacementNamed(context, AppRoutes.home);
+                  },
                 ),
               ],
             ),

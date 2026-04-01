@@ -231,8 +231,8 @@ def _extract_landmarks(image: np.ndarray) -> Optional[Dict[str, Tuple[float, flo
 
     pose = mp.solutions.pose.Pose(
         static_image_mode=True,
-        model_complexity=2,
-        min_detection_confidence=0.35,
+        model_complexity=1,
+        min_detection_confidence=0.25,
     )
     try:
         for variant in _prepare_variants(image):
@@ -253,9 +253,13 @@ def _extract_landmarks(image: np.ndarray) -> Optional[Dict[str, Tuple[float, flo
                 "left_ankle": mp.solutions.pose.PoseLandmark.LEFT_ANKLE,
                 "right_ankle": mp.solutions.pose.PoseLandmark.RIGHT_ANKLE,
             }
+            min_visibility = 1.0
             for name, idx in landmark_map.items():
                 landmark = results.pose_landmarks.landmark[idx]
+                min_visibility = min(min_visibility, float(landmark.visibility))
                 landmark_dict[name] = (landmark.x * width, landmark.y * height)
+            if min_visibility < 0.2:
+                continue
             return landmark_dict
     finally:
         pose.close()

@@ -278,11 +278,34 @@ async def scan_body(user_id: int, file: UploadFile = File(...)):
     conn.close()
 
     image_bytes = await file.read()
+    if not image_bytes:
+        raise HTTPException(status_code=400, detail="Empty image upload.")
+
     image_np = np.frombuffer(image_bytes, dtype=np.uint8)
     image = cv2.imdecode(image_np, cv2.IMREAD_COLOR)
 
     if image is None:
-        raise HTTPException(status_code=400, detail="Invalid image file.")
+        # Fallback path for formats OpenCV may fail to decode (e.g. some HEIC/JFIF variants).
+        try:
+            from PIL import Image  # type: ignore
+
+            import io
+
+            pil_img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+            image = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
+        except Exception:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Unsupported image format. Please upload a clear JPG or PNG full-body image."
+                ),
+            )
+
+    # Keep scan latency stable for very large images.
+    h, w = image.shape[:2]
+    if max(h, w) > 1600:
+        scale = 1600.0 / max(h, w)
+        image = cv2.resize(image, (int(w * scale), int(h * scale)))
 
     try:
         result = analyse_image(image)

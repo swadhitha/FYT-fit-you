@@ -10,8 +10,6 @@ import re
 from typing import Optional, Dict, List, Tuple
 
 
-# ─── Color vocabulary for extraction ──────────────────────────
-
 ALL_COLORS = [
     "black", "white", "grey", "gray", "cream", "beige", "khaki", "charcoal",
     "navy", "blue", "light blue", "teal", "purple", "lavender",
@@ -22,55 +20,38 @@ ALL_COLORS = [
 ]
 
 
-# ─── Intent Classification ───────────────────────────────────
-
 def classify_intent(message: str) -> str:
     """Classify user message into an intent category."""
     msg = message.lower().strip()
 
-    # Greeting
-    greeting_patterns = [
-        r"\bhi\b",
-        r"\bhello\b",
-        r"\bhey\b",
-        r"\bgood morning\b",
-        r"\bgood evening\b",
-    ]
-    if any(re.search(pattern, msg) for pattern in greeting_patterns):
+    if any(re.search(pattern, msg) for pattern in [r"\bhi\b", r"\bhello\b", r"\bhey\b"]):
         if len(msg.split()) <= 4:
             return "greeting"
 
-    # Why / explanation
     if any(w in msg for w in ["why", "explain", "how does", "reason", "tell me why"]):
         return "why_this_outfit"
 
-    # Make more casual
     if any(w in msg for w in ["casual", "relaxed", "comfortable", "chill", "laid back"]):
         if any(w in msg for w in ["more", "make", "want", "prefer", "too formal"]):
             return "make_more_casual"
 
-    # Make more formal
     if any(w in msg for w in ["formal", "professional", "dressy", "elegant", "polished"]):
         if any(w in msg for w in ["more", "make", "want", "prefer", "too casual"]):
             return "make_more_formal"
 
-    # Dislike color
     if any(w in msg for w in ["don't like", "dont like", "hate", "dislike", "not a fan", "remove"]):
         for color in ALL_COLORS:
             if color in msg:
                 return "dislike_color"
 
-    # Prefer color
     if any(w in msg for w in ["prefer", "love", "like", "want more", "favorite"]):
         for color in ALL_COLORS:
             if color in msg:
                 return "prefer_color"
 
-    # Try alternative
     if any(w in msg for w in ["alternative", "another", "different", "other", "else", "change", "swap"]):
         return "try_alternative"
 
-    # Style query
     if any(w in msg for w in ["what should", "suggest", "recommend", "advice", "tip", "style"]):
         return "general_style_qa"
 
@@ -81,10 +62,10 @@ def extract_colors_from_message(message: str) -> List[str]:
     """Extract color names mentioned in a message."""
     msg = message.lower()
     found = []
-    for color in sorted(ALL_COLORS, key=len, reverse=True):  # Match longer names first
+    for color in sorted(ALL_COLORS, key=len, reverse=True):
         if color in msg:
             found.append(color.title())
-            msg = msg.replace(color, "")  # Avoid double-matching
+            msg = msg.replace(color, "")
     return found
 
 
@@ -104,6 +85,22 @@ def extract_sentiment(message: str) -> str:
     return "neutral"
 
 
+def _pick(text: str, variants: List[str]) -> str:
+    idx = abs(hash(text)) % len(variants)
+    return variants[idx]
+
+
+def _extract_context_points(current_outfit: Optional[dict]) -> List[str]:
+    if not current_outfit:
+        return []
+    explanation = current_outfit.get("explanation")
+    if isinstance(explanation, list):
+        return [str(x) for x in explanation[:2]]
+    if isinstance(explanation, str) and explanation.strip():
+        return [explanation.strip()]
+    return []
+
+
 def generate_response(
     intent: str,
     message: str,
@@ -113,108 +110,107 @@ def generate_response(
 ) -> Tuple[str, List[str]]:
     """
     Generate a chatbot response and suggestion chips.
-    
+
     Returns (response_text, suggestion_chips)
     """
     suggestions = ["Why this outfit?", "Make it casual", "Try alternative"]
+    msg = message.strip()
+    context_points = _extract_context_points(current_outfit)
 
     if intent == "greeting":
         name = user_name or "there"
-        response = (
-            f"Hi {name}! 👋 I'm your AI stylist. I can explain outfit choices, "
-            f"adjust recommendations, or help you refine your style. What would you like?"
+        response = _pick(
+            msg,
+            [
+                f"Hi {name}! I can explain your current look, tune formality, and learn your style preferences in real time.",
+                f"Welcome back, {name}. Ask me to refine your outfit by occasion, mood, color, or comfort.",
+            ],
         )
-        suggestions = ["Show my outfit", "Style tips", "Update preferences"]
+        suggestions = ["Why this outfit?", "Make it casual", "Try alternative"]
 
     elif intent == "why_this_outfit":
-        if current_outfit and "explanation" in current_outfit:
-            bullets = current_outfit["explanation"]
-            response = "Here's why this outfit works for you:\n\n"
-            for bullet in bullets:
-                response += f"• {bullet}\n"
+        if context_points:
+            response = "Here is why this recommendation was chosen:\n\n"
+            for point in context_points:
+                response += f"- {point}\n"
             if body_type:
-                response += f"\nThis is optimized for your {body_type} body type."
+                response += f"\nI also tuned this for your {body_type} profile."
         else:
-            response = (
-                "This outfit was selected based on your body proportions, "
-                "the occasion you chose, and your style preferences. "
-                "Each piece was scored on appropriateness, comfort, and confidence."
+            response = _pick(
+                msg,
+                [
+                    "This look is ranked using occasion-fit, confidence match, comfort, and your saved style signals.",
+                    "I chose this based on context suitability, body-profile compatibility, and your preference history.",
+                ],
             )
-        suggestions = ["Make it casual", "Change colors", "Try alternative"]
+        suggestions = ["Try alternative", "Make it casual", "Make it formal"]
 
     elif intent == "make_more_casual":
-        response = (
-            "Got it! I'll dial down the formality. "
-            "I'm looking for more relaxed pieces in your wardrobe — "
-            "think cotton, softer fabrics, and less structured cuts. "
-            "Let me regenerate your outfit with a casual focus."
+        response = _pick(
+            msg,
+            [
+                "Done. I will bias your next look toward relaxed silhouettes, lighter fabrics, and lower formality pieces.",
+                "Got it. I will reduce structure and switch toward casual combinations from your current wardrobe.",
+            ],
         )
-        suggestions = ["Make it formal", "Why this outfit?", "Change colors"]
+        suggestions = ["Try alternative", "Why this outfit?", "Avoid black"]
 
     elif intent == "make_more_formal":
-        response = (
-            "Understood! I'll elevate the look. "
-            "I'm searching for structured pieces, refined fabrics, "
-            "and polished combinations. "
-            "Let me regenerate with a more formal approach."
+        response = _pick(
+            msg,
+            [
+                "Understood. I will prioritize sharper tailoring, cleaner lines, and elevated formality for the next look.",
+                "Great. I will push recommendations toward polished combinations suitable for formal settings.",
+            ],
         )
-        suggestions = ["Make it casual", "Why this outfit?", "Change colors"]
+        suggestions = ["Try alternative", "Why this outfit?", "Prefer navy"]
 
     elif intent == "dislike_color":
-        colors = extract_colors_from_message(message)
+        colors = extract_colors_from_message(msg)
         if colors:
             color_str = ", ".join(colors)
-            response = (
-                f"Noted! I'll avoid {color_str} in future recommendations. "
-                f"Your preference has been saved. Let me find alternatives without those colors."
-            )
+            response = f"Noted. I will avoid {color_str} in future recommendations and rebalance your palette accordingly."
         else:
-            response = (
-                "I understand you don't like certain colors. "
-                "Could you tell me which specific colors to avoid?"
-            )
+            response = "Noted. Tell me the specific colors you want me to avoid and I will update your preferences."
         suggestions = ["Prefer warm tones", "Prefer cool tones", "Try alternative"]
 
     elif intent == "prefer_color":
-        colors = extract_colors_from_message(message)
+        colors = extract_colors_from_message(msg)
         if colors:
             color_str = ", ".join(colors)
-            response = (
-                f"Great taste! I'll prioritize {color_str} in your recommendations. "
-                f"Your preference has been saved."
-            )
+            response = f"Perfect. I will prioritize {color_str} more often while keeping occasion suitability intact."
         else:
-            response = (
-                "I'd love to know your favorite colors! "
-                "Tell me which colors make you feel confident."
-            )
-        suggestions = ["Show outfits", "Why this color?", "Try alternative"]
+            response = "Share your preferred colors and I will prioritize them in future outfits."
+        suggestions = ["Try alternative", "Why this color?", "Make it formal"]
 
     elif intent == "try_alternative":
-        response = (
-            "Let me find a different combination from your wardrobe. "
-            "I'll keep the same occasion and preferences but mix up the pieces."
+        response = _pick(
+            msg,
+            [
+                "I will generate a different combination using your same occasion and constraints, with better variety.",
+                "I am switching to an alternative outfit that keeps context fit but changes the piece mix.",
+            ],
         )
-        suggestions = ["Why this outfit?", "Make it casual", "Save this look"]
+        suggestions = ["Why this outfit?", "Make it casual", "Make it formal"]
 
-    else:  # general_style_qa
+    else:
+        body_tip = ""
         if body_type:
             tips = {
-                "Rectangle": "For a Rectangle body type, creating waist definition is key. Try belted pieces, layered outfits, and textured fabrics at the waist.",
-                "Triangle": "For a Triangle body type, draw attention upward with structured shoulders, interesting necklines, and lighter-colored tops.",
-                "Inverted Triangle": "For an Inverted Triangle body type, balance wider shoulders with fuller bottoms, A-line skirts, and V-necklines.",
-                "Hourglass": "For an Hourglass body type, embrace your curves with fitted pieces that follow your natural waistline.",
+                "Rectangle": "Create waist definition with layered structure and balanced contrast.",
+                "Triangle": "Use upper-body visual weight and cleaner bottom lines for balance.",
+                "Inverted Triangle": "Use fuller or straighter bottoms to balance shoulder width.",
+                "Hourglass": "Use cuts that follow natural waist and maintain proportion continuity.",
             }
-            response = tips.get(body_type,
-                "I can help you with style advice! Try asking about specific outfits, colors, or occasions.")
-        else:
-            response = (
-                "I'm here to help with styling! You can ask me:\n"
-                "• Why a particular outfit was recommended\n"
-                "• To adjust formality (more casual or formal)\n"
-                "• To avoid or prefer certain colors\n"
-                "• For general style tips"
-            )
-        suggestions = ["Show my body type tips", "Color advice", "Occasion styling"]
+            body_tip = f" Body tip: {tips.get(body_type, '')}".strip()
+
+        response = _pick(
+            msg,
+            [
+                "Ask me to tune by occasion, confidence, comfort, or color and I will adapt your next recommendation." + (f" {body_tip}" if body_tip else ""),
+                "I can refine your look instantly: make it more casual/formal, avoid colors, or explain why a look works." + (f" {body_tip}" if body_tip else ""),
+            ],
+        )
+        suggestions = ["Why this outfit?", "Make it casual", "Try alternative"]
 
     return response, suggestions

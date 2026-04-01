@@ -20,6 +20,8 @@ class _BodyScanScreenState extends State<BodyScanScreen> {
     final pickedFile = await _picker.pickImage(
       source: ImageSource.camera,
       preferredCameraDevice: CameraDevice.rear,
+      maxWidth: 1600,
+      imageQuality: 90,
     );
 
     if (pickedFile == null) return;
@@ -53,7 +55,11 @@ class _BodyScanScreenState extends State<BodyScanScreen> {
   }
 
   Future<void> _uploadFromGallery() async {
-    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+    final pickedFile = await _picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1600,
+      imageQuality: 90,
+    );
     if (pickedFile == null) return;
 
     final userId = context.read<UserProvider>().userId;

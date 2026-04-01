@@ -63,6 +63,20 @@ async def get_recommendations(user_id: int, req: RecommendationRequest):
 
     # Generate recommendations
     climate = req.climate or user["climate_region"]
+    recent_rows = cursor.execute(
+        "SELECT outfit_items FROM recommendations WHERE user_id = ? ORDER BY created_at DESC LIMIT 30",
+        (user_id,),
+    ).fetchall()
+    recent_signatures: set[str] = set()
+    for row in recent_rows:
+        try:
+            items = json.loads(row["outfit_items"] or "[]")
+            ids = sorted(str(i.get("id", "")) for i in items if isinstance(i, dict))
+            if ids:
+                recent_signatures.add("-".join(ids))
+        except Exception:
+            continue
+
     results = generate_recommendations(
         wardrobe=wardrobe,
         body_type=body_type,
@@ -70,6 +84,8 @@ async def get_recommendations(user_id: int, req: RecommendationRequest):
         mood=req.mood,
         climate=climate,
         preferences=preferences,
+        additional_notes=req.additional_notes,
+        recent_signatures=recent_signatures,
         top_n=3,
     )
 
